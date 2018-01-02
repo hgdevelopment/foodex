@@ -1,0 +1,70 @@
+<?php
+
+namespace App\Http\Controllers\admin;
+
+use Illuminate\Http\Request;
+use App\Http\Requests;
+use App\Http\Controllers\Controller;
+use App\Product;
+use App\Purchase_order;
+use App\Purchase_product;
+use App\Unit;
+use App\Brand;
+use Carbon\Carbon;
+use Auth;
+use DB;
+use Excel;
+
+class StockReportController extends Controller
+{
+
+
+    public function index()
+    {
+        // if(Auth::guard('admin')->user())
+        // {
+            return view('admin.report.stock_report');
+        // }
+    }
+
+
+
+    public function create(Request $request)
+    {
+        $fdate=$request->fdate;
+        $tdate=$request->tdate;
+        return view('admin.report.stock_report',compact('fdate','tdate'));
+    }
+
+
+    public function store(Request $request)
+    {
+        //
+    }
+
+
+    public function show(stock $stock)
+    {
+        //
+    }
+
+
+
+    public function edit(stock $stock)
+    {
+        //
+    }
+
+
+
+    public function update(Request $request, stock $stock)
+    {
+        //
+    }
+
+
+    public function destroy(stock $stock)
+    {
+        //
+    }
+}

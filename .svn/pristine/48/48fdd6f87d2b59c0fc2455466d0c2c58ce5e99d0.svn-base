@@ -1,0 +1,111 @@
+<?php
+
+namespace App\Http\Controllers\admin;
+
+use Illuminate\Http\Request;
+use App\Http\Requests;
+use App\Http\Controllers\Controller;
+use App\Product;
+use App\Purchase_order;
+use App\Purchase_product;
+use App\Unit;
+use App\Brand;
+use Carbon\Carbon;
+use Auth;
+use DB;
+use Excel;
+
+class StockReportController extends Controller
+{
+
+
+    public function index()
+    {
+        // if(Auth::guard('admin')->user())
+        // {
+        // }
+    }
+
+
+
+    public function create(Request $request)
+    {
+
+    }
+
+
+    public function store(Request $request)
+    {
+
+
+        /*****************Stock Report************/
+        /****************************************/
+
+        if( $request->report=='stockReport')
+        {
+        $fdate=$request->fdate;
+        $tdate=$request->tdate;
+        return view('admin.report.stock_report',compact('fdate','tdate'));
+        }
+
+
+
+        /*****************Stock Report************/
+        /****************************************/
+
+        if( $request->report=='productwiseReport')
+        {
+        $fdate      =   $request->fdate;
+        $tdate      =   $request->tdate;
+        $productIds =   $request->product;
+
+        return view('admin.report.product_wise_report',compact('fdate','tdate','productIds'));
+        }
+
+
+
+        /*****************Stock Report************/
+        /****************************************/
+
+        if( $request->report=='stockMovingReport')
+        {
+        $fdate=$request->fdate;
+        $tdate=$request->tdate;
+        return view('admin.report.stock_report',compact('fdate','tdate'));
+        }
+
+
+
+    }
+
+
+    public function show($report)
+    {
+            if( $report=='stockReport')
+                return view('admin.report.stock_report');
+            if( $report=='productwiseReport')
+                return view('admin.report.product_wise_report');
+            if( $report=='stockMovingReport')
+                return view('admin.report.stock_moving_report');
+    }
+
+
+
+    public function edit(stock $stock)
+    {
+        //
+    }
+
+
+
+    public function update(Request $request, stock $stock)
+    {
+        //
+    }
+
+
+    public function destroy(stock $stock)
+    {
+        //
+    }
+}

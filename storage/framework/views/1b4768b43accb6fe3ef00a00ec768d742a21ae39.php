@@ -1,0 +1,301 @@
+<?php $__env->startSection('sidebar'); ?>
+	<?php echo $__env->make('admin.partial.header', array_except(get_defined_vars(), array('__data', '__path')))->render(); ?>
+	<?php echo $__env->make('admin.partial.aside', array_except(get_defined_vars(), array('__data', '__path')))->render(); ?>
+	<?php echo $__env->make('sweet::alert', array_except(get_defined_vars(), array('__data', '__path')))->render(); ?>
+<?php $__env->stopSection(); ?>
+<?php $__env->startSection('body'); ?>
+<style type="text/css">
+.card-outline-info {
+	background-color: #fff;
+}
+.parsley-required{
+	font-size: 12px;
+	margin-left:-35px;
+}
+</style>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.4/css/select2.min.css" rel="stylesheet" />
+<style>
+	.select2-selection{
+	padding: .5rem .75rem;
+    font-size: 1rem;
+    line-height: 1.25;
+    min-height: 38px;
+	}
+	.select2-container--default .select2-selection--single .select2-selection__arrow {
+   
+    top: 6px;
+    right: 4px;
+}
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    color: #444;
+    line-height: 22px;
+}
+/*.bigdrop{
+     max-width: 200px !important;
+}*/
+</style>
+	<form method="post" action="<?php echo e(URL::to('/')); ?>/admin/updatecreditBill/<?php echo e($view_order->sales_id); ?>" data-parsley-validate class="m-t-40">
+		<?php echo csrf_field(); ?> 
+		<?php echo e(method_field('PUT')); ?>
+
+		<input type="hidden" name="url" id="url" value="<?php echo e(URL::to('/')); ?>">
+		<input type="hidden" name="edit" id="edit" value="<?php echo e($id); ?>">
+		<div class="container-fluid" style="margin-top:-30px">
+			<div class="row">
+				<div class="col-md-3">
+					<div class="card card-outline-info">
+						<div class="card-header">
+							<h4 class="m-b-0 text-white">Customer Details</h4>
+						</div>
+						<div class="card-block">
+							<div class="row">
+								<div class="col-md-6">
+									<div class="form-group">
+										<input type="text" readonly class="form-control form-control-line" name="bill_no" value="<?php echo e($view_order->bill_number); ?>" readonly="" id="bill_no">
+									</div>
+								</div>
+								<div class="col-md-6">
+									<div class="form-group">
+										<input type="text"  class="form-control form-control-line" id="bill_date" name="bill_date" required data-parsley-required-message= "Enter Sales Date" value="<?php echo e($view_order->created_at->format('d-m-Y   H:i:s')); ?>" readonly="">
+									</div>
+								</div>
+								<div class="col-md-12"><br></div>
+								<div class="col-md-6">
+									<div class="form-group">
+										<input type="text"  class="form-control form-control-line" name="sales_person" value="<?php echo e($sales_person->username); ?>" required data-parsley-required-message= "Enter Sales Person" readonly="" id="sales_person">
+									</div>
+								</div>
+								<div class="col-md-6">
+									<div class="form-group">
+										<input type="text"  class="form-control form-control-line" name="me_code" id="me_code" placeholder="ME Code" Name" required data-parsley-required-message= "Enter ME Code." data-parsley-trigger="keyup"  data-parsley-type="number" value="<?php echo e($view_order->me_code); ?>">
+									</div>
+								</div>
+								<div class="col-md-12"><br></div>
+								<div class="col-md-6">
+									<div class="form-group">
+										<input type="text"  class="form-control form-control-line" name="customer_name"  id="customer_name" required data-parsley-required-message= "Enter Customer Name" placeholder="CustomerName" value="<?php echo e($view_order->customer_name); ?>">
+									</div>
+								</div>
+								<div class="col-md-6">
+									<div class="form-group">
+										<input type="text"  class="form-control form-control-line" name="customer_phone" id="customer_phone" required data-parsley-required-message= "Enter Customer Phone No." placeholder="CustomerNumber" data-parsley-trigger="keyup"  data-parsley-type="number" value="<?php echo e($view_order->customer_phone); ?>">
+									</div>
+								</div>
+								<div class="col-md-12"><br></div>
+								<div class="col-md-6">
+									<div class="form-group">
+										<textarea type="text"  class="form-control form-control-line" name="customer_address" id="customer_address" placeholder="CustomerAddress" required data-parsley-required-message= "Enter Customer Address." ><?php echo e($view_order->customer_address); ?></textarea>
+									</div>
+								</div>
+								<div class="col-md-6">
+									<div class="form-group">
+										<textarea type="text"  class="form-control form-control-line" name="shipping_address" id="shipping_address" placeholder="ShippingAddress"><?php echo e($view_order->shipping_address); ?></textarea>
+									</div>
+								</div>
+								<div class="col-md-6">
+									<div class="form-group">
+										<input type="text"  class="form-control form-control-line" name="customer_gst_no" id="customer_gst_no" placeholder="Customer GST" required data-parsley-required-message= "Enter Customer GST No." data-parsley-trigger="keyup"  data-parsley-pattern="(?:\s*[a-zA-Z0-9]\s*)*" value="<?php echo e($view_order->customer_gst); ?>">
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="col-md-9">
+					<div class="card card-outline-info">
+						<div class="card-header">
+							<h4 class="m-b-0 text-white">Product Details (Update Amount)</h4>
+						</div>
+					    <table class="table" id="stock_request_send" style="width: 100%">
+					        <thead>
+					            <tr>
+					                <th>Product Name</th>
+					                <th>Batch No</th>
+					                <th>Quantity</th>
+					                <th>Price</th>
+					                <th>Discount</th>
+					                <th>Total</th>
+					            </tr>
+					        </thead>
+					        <?php if($count>0): ?>
+					        <tbody>
+					            <?php $__currentLoopData = $product_payment_details; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $details): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>                                             
+					            <tr>
+					            	<input type="hidden" name="sales_id" id="sales_id" value="<?php echo e($details->sales_id); ?>">
+					            	<input type="hidden" name="mrp" id="mrp" value="<?php echo e($details->mrp); ?>">
+					                <td><?php echo e($details->name); ?></td>
+					                <td><?php echo e($details->batch_id); ?></td>
+					                <td><?php echo e($details->product_qty); ?></td>
+					                <td><?php echo e($details->basic_cost); ?></td>
+					                <td><?php echo e($details->discount); ?></td>
+					                <td><?php echo e($details->mrp); ?></td>
+					            </tr>
+					            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+					        </tbody>
+					        <?php endif; ?>
+					   		<tbody>
+								<tr>
+									<td colspan="9" style="text-align: right;">
+										<label class="col-md-12">
+											<h5>Grand Total</h5>
+											<input type="hidden" class="form-control" value="" id="gt">
+											<h1><i class="fa fa-inr" aria-hidden="true"></i> <span id="grand_total"> <?php echo e($total_amount); ?></span></h1>
+										</label>
+									</td>
+								</tr>
+							</tbody>
+					    </table>
+				    	<br>
+					</div>
+				</div>
+				<hr>
+				<input type="hidden" name="inc_val" id="inc_val" value=0>
+			</div>
+			<div class="row"  id="payment">
+				<div class="col-md-12">
+					<div class="card card-outline-info">
+						<div class="card-header">
+							<h4 class="m-b-0 text-white">Payment Details</h4>
+						</div>
+						<?php $__currentLoopData = $pay_details; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $pay_detail): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+							<?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+
+						<div class="card-block">
+							<div class="row">
+								<div class="col-md-3">
+									<div class="form-group">
+										<label class="col-md-12"><strong>Payment Type</strong></label>
+										<div class="col-md-12">
+											<select class="form-control p-0" required  data-parsley-required-message="Select Mode" id="payment_type" name="payment_type" onclick="check_mode()">
+												<option value="">Select</option>
+												<option id="normal" value="normal" <?php if($count>0 && $pay_detail->status=='normal'): ?><?php echo e('selected'); ?><?php endif; ?> >Normal</option>
+												<option  value="partial" <?php if($count>0 && $pay_detail->status=='partial'): ?><?php echo e('selected'); ?><?php endif; ?> >Partial</option>
+											</select>
+										</div>
+									</div>
+								</div>
+								<div class="col-md-3" style="display:none" id="display_mode">
+									<div class="form-group">
+										<label class="col-md-12"><strong>Payment Mode </strong></label>
+										<div class="col-md-12">
+											<select class="form-control p-0" required  data-parsley-required-message="Select Mode" id="payment_mode" name="payment_mode" onchange="payment_mode_change();">
+												<option value="">Select</option>
+												<option value="cash" <?php if($count>0 && $pay_detail->payment_mode=='cash'): ?><?php echo e('selected'); ?><?php endif; ?> id="1">Cash</option>
+												<option value="card" <?php if($count>0 && $pay_detail->payment_mode=='card'): ?><?php echo e('selected'); ?><?php endif; ?> id="2">Card</option>
+												<option value="credit" <?php if($count>0 && $pay_detail->payment_mode=='credit'): ?><?php echo e('selected'); ?><?php endif; ?> id="3">Credit</option>
+												<option value="cheque" <?php if($count>0 && $pay_detail->payment_mode=='cheque'): ?><?php echo e('selected'); ?><?php endif; ?>  id="4">Cheque</option>
+												<option value="online" <?php if($count>0 && $pay_detail->payment_mode=='online'): ?><?php echo e('selected'); ?><?php endif; ?> id="5">Online</option>
+												<option value="both" <?php if($count>0 && $pay_detail->payment_mode=='both'): ?><?php echo e('selected'); ?><?php endif; ?> id="6">Both</option>
+												<option value="charity"  <?php if($count>0 && $pay_detail->payment_mode=='charity'): ?><?php echo e('selected'); ?><?php endif; ?> id="7">Charity</option>
+											</select>
+										</div>
+									</div>
+								</div>
+								<div class="col-md-2" >
+									<div class="form-group">
+										<label class="col-md-12" id="paid_cash"><strong>Paid Date</strong></label>
+										<div class="col-md-12">
+											<input type="text"  class="form-control form-control-line" name="paid_date" id="paid_date" readonly="" required="" placeholder="DD-MM-YYYY">
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<div class="card-block" style="margin-top:-30px;">
+							<div class="row">
+								<div class="col-md-2" id="cash_div" >
+									<div class="form-group">
+										<label class="col-md-12">Total Amount </label>
+										<div class="col-md-12">
+											<input type="text"  class="form-control form-control-line" name="total_amount" id="total_amount" readonly="" value="<?php echo e($total_amount); ?>">
+										</div>
+									</div>
+								</div>
+								<div class="col-md-2" id="cash_paid_div" style="display: none">
+									<div class="form-group">
+										<label class="col-md-12" id="paid_cash">Paid Amount</label>
+										<div class="col-md-12">
+											<input type="text"  class="form-control form-control-line" name="paid_amount" id="paid_amount"data-parsley-trigger="keyup"  data-parsley-type="number">
+											<input type="hidden"   name="balance_amount" id="balance_amount" value="<?php echo e(isset($total_balance_amount) ? $total_balance_amount : 0); ?>">
+											<input type="hidden"   name="total_paid_amount" id="total_paid_amount" value="<?php echo e(isset($total_paid_amount) ? $total_paid_amount : 0); ?>">  
+											<input type="hidden"   name="paid_amount1" id="paid_amount1" value="<?php echo e(isset($pay_detail->paid_amount) ? $pay_detail->paid_amount : 0); ?>">
+
+										</div>
+									</div>
+								</div>
+								<div class="col-md-2" id="card_div" style="display: none">
+									<div class="form-group">
+										<label class="col-md-12">By Card</label>
+										<div class="col-md-12">
+											<input type="text"  class="form-control form-control-line" name="card" id="card" value="<?php echo e(isset($pay_detail->card_amount) ? $pay_detail->card_amount : 0); ?>" data-parsley-trigger="keyup"  data-parsley-type="number" readonly="">
+										</div>
+									</div>
+								</div>
+								<div class="col-md-2" id="balance_div" style="display: none">
+									<div class="form-group">
+										<label class="col-md-12">Balance Amount</label>
+										<div class="col-md-12">
+											<input type="text"  class="form-control form-control-line" name="balance" id="balance" readonly="" value=" ">
+										</div>
+									</div>
+								</div>
+								<div class="col-md-2" id="transaction_div" style="display: none">
+									<div class="form-group">
+										<label class="col-md-12">Transaction No</label>
+										<div class="col-md-12">
+											<input type="text"  class="form-control form-control-line" name="transaction_no" id="transaction_no" value="<?php echo e(isset($pay_detail->transaction_number) ? $pay_detail->transaction_number : 0); ?>" data-parsley-trigger="keyup"  data-parsley-type="number">
+										</div>
+									</div>
+								</div>
+								<div class="col-md-2" id="reference_div" style="display: none">
+									<div class="form-group">
+										<label class="col-md-12">Reference No</label>
+										<div class="col-md-12">
+											<input type="text"  class="form-control form-control-line" name="reference_no" id="reference_no" value="<?php echo e(isset($pay_detail->reference_number) ? $pay_detail->reference_number : 0); ?>" data-parsley-trigger="keyup"  data-parsley-type="number">
+										</div>
+									</div>
+								</div>
+								<div class="col-md-2" id="cheque_div" style="display: none">
+									<div class="form-group">
+										<label class="col-md-12">Cheque No</label>
+										<div class="col-md-12">
+											<input type="text"  class="form-control form-control-line" name="cheque_no" id="cheque_no" value="<?php echo e(isset($pay_detail->cheque_number) ? $pay_detail->cheque_number : 0); ?>" data-parsley-trigger="keyup"  data-parsley-type="number">
+										</div>
+									</div>
+								</div>
+								<div class="col-md-2" id="account_div" style="display: none">
+									<div class="form-group">
+										<label class="col-md-12">Account No</label>
+										<div class="col-md-12">
+											<input type="text"  class="form-control form-control-line" name="account_no" id="account_no" value="<?php echo e(isset($pay_detail->account_number) ? $pay_detail->account_number : 0); ?>" data-parsley-trigger="keyup"  data-parsley-type="number">
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="card-block">
+							<div class="row">
+								<div class="col-lg-12 col-xlg-12 col-md-12">
+									<div class="form-group">
+										<div class="col-sm-12">
+											<input type="submit" class="btn btn-success pull-left" style="margin-right:1%" value="Update" name="submit">
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>						
+	</form>
+<?php $__env->stopSection(); ?>
+<?php $__env->startSection('jquery'); ?>
+<script src="<?php echo e(URL::asset('js/updateamount.js')); ?>"></script>
+<script type="text/javascript">
+	$('#paid_date').datepicker();
+</script>
+
+<?php $__env->stopSection(); ?>
+<?php echo $__env->make('admin.layout.puredrops', array_except(get_defined_vars(), array('__data', '__path')))->render(); ?>

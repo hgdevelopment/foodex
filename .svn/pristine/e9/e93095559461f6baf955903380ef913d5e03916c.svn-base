@@ -1,0 +1,506 @@
+<?php
+
+namespace App\Http\Controllers\admin;
+
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use App\Branch;
+use App\Product;
+use App\Purchase_order;
+use App\Purchase_product;
+use App\sales_product;
+use App\damagedproduct;
+use App\Transfer_request;
+use App\Transfer_product;
+use App\Transfer_confirm_product;
+use Carbon\Carbon;
+use Auth;
+use DB;
+// use DataTable;
+class StockTransferController extends Controller
+{
+    //
+    
+    public function stock_request(){
+      $_branch=Branch::where('id',Auth::guard('admin')->user()->branch)->first();
+      $_branchs=Branch::all();
+      $data=['branch'=>$_branch->branch_name,'branchs'=>$_branchs];
+      return view('admin.transfer.stock_request',compact('data'));
+    }
+    public function stock_request_confirm($id){
+      $data=Transfer_request::where('transfer_request.id',$id);
+                  $data=$data->join('branches',function($join){
+                         $join->on('branches.id', '=', 'transfer_request.requested_from_branch');
+                    });
+                  $data=$data->join('logins',function($join){
+                         $join->on('logins.id', '=', 'transfer_request.requested_by_id');
+                    })
+                    ->first();
+       $data_products=DB::table('transfer_products')->where('transfer_products.transfer_request_id',$id)
+    	->leftJoin('products','products.id','=','transfer_products.product_id')->get();
+      return view('admin.transfer.stock_request_confirm',compact('data','data_products','id'));
+    }
+    public function stock_request_store(Request $request){
+      $id=DB::table('transfer_request')->max('id');
+      if($id==null){
+         $code=str_pad(1,10,"0",STR_PAD_LEFT);
+      }else{
+         $code=str_pad(($id+1),10,"0",STR_PAD_LEFT);
+      }
+       $request->validate([
+            'to_branch' => 'required'
+       
+        ]);
+       $request_branch=new Transfer_request;
+       $request_branch->transfer_code='TNR/'.$code;
+       $request_branch->requested_from_branch=Auth::guard('admin')->user()->branch;
+       $request_branch->requested_to_branch=$request->to_branch;
+       $request_branch->requested_by_id=Auth::guard('admin')->user()->id;
+       $request_branch->requested_date=date('Y-m-d');
+       $request_branch->save();
+       $request_id=$request_branch->id;
+       for ($i=0; $i<count($request->product); $i++ ) {
+            if($request->product[$i]!=''){
+            	$transfer_products=new Transfer_product;
+            	$transfer_products->transfer_request_id=$request_id;
+            	$transfer_products->product_id=$request->product[$i];
+              $transfer_products->product_code=$request->product_code[$i];
+            	$transfer_products->product_qty=$request->qty[$i];
+            	$transfer_products->status='0';
+            	$transfer_products->from_branch=Auth::guard('admin')->user()->branch;
+            	$transfer_products->to_branch=$request->to_branch;
+            	$transfer_products->save();
+            }
+        }
+
+       return response()->json(['result'=>true]);  
+    }
+    public function stock_confirm(Request $request){
+        $stock_request=Transfer_request::where('id',$request->product_request_id)->first();
+        $stock_request->status='confirm';
+        $stock_request->save();
+
+        for ($i=0; $i<count($request->product); $i++ ) {
+            if($request->product[$i]!=''){
+            	$transfer_products=Transfer_product::where([
+            		['transfer_request_id','=',$request->product_request_id],
+            	    ['product_id','=',$request->product_id[$i]]
+            	])->first();
+            	if($request->status[$i]=='1'){
+                   $transfer_products->status='1';
+            	}else{
+                   $transfer_products->status='2';
+            	}
+            	 $transfer_products->save();
+
+                if($request->status[$i]=='1'){
+	               $product=Product::where('product_number',$request->product_code[$i])
+		           ->where('added_branch',Auth::guard('admin')->user()->branch)
+		           ->first();
+		           $confirm_product=new Transfer_confirm_product;
+		           $confirm_product->transfer_request_id=$request->product_request_id;
+		           $confirm_product->batch_id=$request->batch_no[$i];
+		           $confirm_product->product_id=$product->id;
+               $confirm_product->product_code=$request->product_code[$i];
+		           $confirm_product->product_qty=$request->qty[$i];
+		           $confirm_product->from_branch=$request->request_from_branch;
+		           $confirm_product->to_branch=Auth::guard('admin')->user()->branch;
+		           $confirm_product->save();
+	           }
+            }
+        }
+
+    	 return response()->json(['result'=>true]); 
+    }
+    public function stock_confirm_instock(Request $request){
+      $id=DB::table('purchase_orders')->max('id');
+      if($id==null){
+         $code=str_pad(1,10,"0",STR_PAD_LEFT);
+      }else{
+         $code=str_pad(($id+1),10,"0",STR_PAD_LEFT);
+      }
+       $purchase_order= new Purchase_order;
+       $purchase_order->purchase_no=$code;
+       $purchase_order->transfer_request_id=$request->request_id;
+       $purchase_order->stock_status='transfer';
+       $purchase_order->branch_id=Auth::guard('admin')->user()->branch;
+       $purchase_order->addedById=Auth::guard('admin')->user()->id;
+       $purchase_order->save();
+       $id=$purchase_order->id;
+
+       $data_product_confirm=DB::table('transfer_confirm_products')
+       ->where('transfer_confirm_products.transfer_request_id', $request->request_id)
+       ->leftJoin('products','products.id','=','transfer_confirm_products.product_id')
+       ->get();
+       foreach ($data_product_confirm as $key => $value) {
+            $product=Product::where('product_number',$value->product_number)
+		           ->where('added_branch',Auth::guard('admin')->user()->branch)
+		           ->first();
+            $batch_product=Purchase_product::where('product_id',$value->product_id)
+                   ->where('order_id',$value->batch_id)
+		           ->where('branch_id',$value->to_branch)
+		           ->first();
+
+    		$purchase_products = new Purchase_product;
+            $purchase_products->product_id=$product->id;
+            $purchase_products->order_id=$id;
+            $purchase_products->branch_id=Auth::guard('admin')->user()->branch;
+            $purchase_products->product_qty=$value->product_qty;
+            $purchase_products->basic_cost=$product->basic_cost;
+            $purchase_products->discount=$product->product_discount;
+            $purchase_products->gst=$product->product_gst;
+            $purchase_products->billing_price=$product->billing_price;
+            $purchase_products->manufacture_date=$batch_product->manufacture_date;
+            $purchase_products->expiry_date=$batch_product->expiry_date;
+            $purchase_products->expiry_days=$batch_product->expiry_days;
+            $purchase_products->save();
+    	}
+        $stock_request=Transfer_request::where('id',$request->request_id)->first();
+        $stock_request->status='stock';
+        $stock_request->save();
+
+        return response()->json(['result'=>true,'msg'=>'successfully','last_id'=>$id]);
+    }
+    public function stock_request_list(){
+    	return view('admin.transfer.stock_request_list');
+    }
+    public function stock_request_view($id){
+    	 $data_branch=Transfer_request::where('transfer_request.id',$id)->first();
+    	 
+    	 $data=Transfer_request::where('transfer_request.id',$id);
+                   if($data_branch->requested_from_branch==Auth::guard('admin')->user()->branch){
+    	          $data=$data->join('branches',function($join){
+                         $join->on('branches.id', '=', 'transfer_request.requested_to_branch');
+                    });
+
+                   }else{
+                  $data=$data->join('branches',function($join){
+                         $join->on('branches.id', '=', 'transfer_request.requested_from_branch');
+                    });
+                   }
+               
+                 $data=$data->join('logins',function($join){
+                         $join->on('logins.id', '=', 'transfer_request.requested_by_id');
+                    })
+                    ->first();
+
+
+    	$data_products=DB::table('transfer_products')->where('transfer_products.transfer_request_id',$id)
+    	->leftJoin('products','products.id','=','transfer_products.product_id')->get();
+    	$data_product_confirm=DB::table('transfer_confirm_products')->where('transfer_confirm_products.transfer_request_id',$id)
+    	->leftJoin('products','products.id','=','transfer_confirm_products.product_id')->get();
+    	return view('admin.transfer.stock_request_view',compact('data','data_products','data_product_confirm','id'));
+    }
+    public function stock_request_datatable(Request $request){
+         $branch_id=Auth::guard('admin')->user()->branch;
+        $data=DB::table('transfer_request')
+                    ->join('branches',function($join){
+                         $join->on('branches.id', '=', 'transfer_request.requested_to_branch');
+                    })
+                    ->join('logins',function($join){
+                         $join->on('logins.id', '=', 'transfer_request.requested_by_id');
+                    })
+                    ->select(
+                        'transfer_request.transfer_code',
+                        'transfer_request.status',
+                        'branches.branch_name',
+                        'logins.employee_name',
+                        'transfer_request.id as request_id')
+                    ->where('transfer_request.requested_from_branch',$branch_id)
+                    ->get();
+
+          $datatable= \DataTables::of($data)
+             ->addColumn('action', function ($data) {
+                return '<div class="dropdown">
+                  <button class="btn btn-primary btn-sm dropdown-toggle" type="button" data-toggle="dropdown">Action
+                  <span class="caret"></span></button>
+                  <ul class="dropdown-menu">
+                    <li><a href="#" class="view-request-send" data-id="'.$data->request_id.'"><i class="fa fa-eye" aria-hidden="true"></i> View</a></li>
+                    
+                  </ul>
+                </div>';  });
+           
+        
+         return $datatable->make(true);
+    }
+    public function stock_recieve_datatable(Request $request){
+    	  $branch_id=Auth::guard('admin')->user()->branch;
+        $data=DB::table('transfer_request')
+                    ->join('branches',function($join){
+                         $join->on('branches.id', '=', 'transfer_request.requested_from_branch');
+                    })
+                    ->join('logins',function($join){
+                         $join->on('logins.id', '=', 'transfer_request.requested_by_id');
+                    })
+                    ->select(
+                        'transfer_request.transfer_code',
+                        'transfer_request.status',
+                        'branches.branch_name',
+                        'logins.employee_name',
+                        'transfer_request.id as request_id')
+                    ->where('transfer_request.requested_to_branch',$branch_id)
+                    ->get();
+
+          $datatable= \DataTables::of($data)
+             ->addColumn('action', function ($data) {
+                return '<div class="dropdown">
+                  <button class="btn btn-primary btn-sm dropdown-toggle" type="button" data-toggle="dropdown">Action
+                  <span class="caret"></span></button>
+                  <ul class="dropdown-menu">
+                    <li><a href="#" class="view-request-recieve" data-id="'.$data->request_id.'"><i class="fa fa-eye" aria-hidden="true"></i> View</a></li>
+                    
+                  </ul>
+                </div>';  });
+           
+        
+         return $datatable->make(true);
+    }
+    public function get_batch(Request $request){
+      $data=Purchase_order::where('branch_id',Auth::guard('admin')->user()->branch)->get();
+      $_make_array=[];
+        foreach ($data as $key => $value) {
+            $_make_array[]=['id'=>$value->id,
+                            'text'=>$value->purchase_no
+                            ];
+        }
+        return response()->json(['results'=>$_make_array]);
+    }
+    public function get_batch_qtyAvl(Request $request){
+      $data=Purchase_order::where('branch_id',Auth::guard('admin')->user()->branch)->get();
+      $_make_array=[];
+
+        foreach ($data as $key => $value) {
+        	$quantity_out=0;
+           $product=Product::where('product_number',$request->product_no)
+           ->where('added_branch',Auth::guard('admin')->user()->branch)
+           ->first();
+           $sales=sales_product::where([
+            	    ['batch_id','=',$value->id],
+            	    ['branch_id','=',Auth::guard('admin')->user()->branch],
+            	    ['product_id','=',$product->id],
+            	    ['status','<>',"3"]
+            	])
+           ->select(DB::raw('SUM(product_qty) as quantity'))
+           ->groupBy('batch_id')
+           ->groupBy('product_id')
+           ->get();
+           $transfer=Transfer_confirm_product::where([
+            	    ['batch_id','=',$value->id],
+            	    ['to_branch','=',Auth::guard('admin')->user()->branch],
+            	    ['product_id','=',$product->id]
+            	])
+           ->select(DB::raw('SUM(product_qty) as quantity'))
+           ->groupBy('batch_id')
+           ->groupBy('product_id')
+           ->get();
+           $damagedproduct=damagedproduct::where([
+            	    ['batch_id','=',$value->id],
+            	    ['branch_id','=',Auth::guard('admin')->user()->branch],
+            	    ['product_id','=',$product->id]
+            	])
+           ->select(DB::raw('SUM(product_qty) as quantity'))
+           ->groupBy('batch_id')
+           ->groupBy('product_id')
+           ->get();
+
+         $avl_qty= Purchase_product::where([
+            	    ['order_id','=',$value->id],
+            	    ['product_id','=',$product->id],
+            	    ['branch_id','=',Auth::guard('admin')->user()->branch]
+            	])->get();
+           $avl_quantity=0;
+           foreach ($avl_qty as $key1 => $value1){
+                   $avl_quantity+=$value1->product_qty;
+                   }
+
+           foreach ($sales as $key1 => $value1){
+                   $quantity_out+=$value1->quantity;
+                   }
+
+           foreach ($transfer as $key1 => $value1){
+                   $quantity_out+=$value1->quantity;
+                   }
+
+           foreach ($damagedproduct as $key1 => $value1){
+                   $quantity_out+=$value1->quantity;
+                   }
+
+            $_make_array[]=['id'=>$value->id,
+                            'text'=>$value->purchase_no,
+                            'available_quantity'=>($avl_quantity-$quantity_out)
+                            ];
+        }
+        return response()->json(['results'=>$_make_array]);
+    }
+    //batch number
+    public function product_select(Request $request){
+       $data= Product::where('products.added_branch',Auth::guard('admin')->user()->branch)
+                        ->where(function( $query ) use ($request)
+                          {
+                              $query->where('products.product_number', 'LIKE', '%'.$request->search.'%')
+                                  ->orWhere('products.product_name', 'LIKE', '%'.$request->search.'%');
+                          })
+                       ->rightJoin('purchase_products','purchase_products.product_id','=','products.id')
+                       ->where('purchase_products.order_id','=',$request->batchno)
+                       ->get();
+        $_make_array=[];
+        foreach ($data as $key => $value) {
+           $quantity_out=0;
+           $sales=sales_product::where([
+            	    ['batch_id','=',$value->order_id],
+            	    ['branch_id','=',Auth::guard('admin')->user()->branch],
+            	    ['product_id','=',$value->product_id],
+            	    ['status','<>',"3"]
+            	])
+           ->select(DB::raw('SUM(product_qty) as quantity'))
+           ->groupBy('batch_id')
+           ->groupBy('product_id')
+           ->get();
+           $transfer=Transfer_confirm_product::where([
+            	    ['batch_id','=',$value->order_id],
+            	    ['to_branch','=',Auth::guard('admin')->user()->branch],
+            	    ['product_id','=',$value->product_id]
+            	])
+           ->select(DB::raw('SUM(product_qty) as quantity'))
+           ->groupBy('batch_id')
+           ->groupBy('product_id')
+           ->get();
+           $damagedproduct=damagedproduct::where([
+            	    ['batch_id','=',$value->order_id],
+            	    ['branch_id','=',Auth::guard('admin')->user()->branch],
+            	    ['product_id','=',$value->product_id]
+            	])
+           ->select(DB::raw('SUM(product_qty) as quantity'))
+           ->groupBy('batch_id')
+           ->groupBy('product_id')
+           ->get();
+
+           foreach ($sales as $key1 => $value1)
+                   $quantity_out+=$value1->quantity;
+
+           foreach ($transfer as $key1 => $value1)
+                   $quantity_out+=$value1->quantity;
+
+           foreach ($damagedproduct as $key1 => $value1)
+                   $quantity_out+=$value1->quantity;
+          
+
+            $_make_array[]=['id'=>$value->product_id,
+                            'text'=>$value->product_name,
+                            'basic_cost'=>$value->basic_cost,
+                            'gst'=>$value->product_gst,
+                            // 'mrp'=>$value->product_mrp,
+                            'billing_price'=>$value->billing_price,
+                            'product_discount'=>$value->product_discount,
+                            'quantity'=>$value->product_qty,
+                            'out_quantity'=>$quantity_out];
+        }
+        return response()->json(['results'=>$_make_array]);      
+        
+    }
+    public function excel_report($id){
+      // ob_end_clean();
+      // ob_start();
+      // $excelData=array();
+      // $data_branch=Transfer_request::where('transfer_request.id',$id)->first();
+       
+      //  $data=Transfer_request::where('transfer_request.id',$id);
+      //              if($data_branch->requested_from_branch==Auth::guard('admin')->user()->branch){
+      //           $data=$data->join('branches',function($join){
+      //                    $join->on('branches.id', '=', 'transfer_request.requested_to_branch');
+      //               });
+
+      //              }else{
+      //             $data=$data->join('branches',function($join){
+      //                    $join->on('branches.id', '=', 'transfer_request.requested_from_branch');
+      //               });
+      //              }
+               
+      //            $data=$data->join('logins',function($join){
+      //                    $join->on('logins.id', '=', 'transfer_request.requested_by_id');
+      //               })
+      //               ->first();
+
+      // $data_products=DB::table('transfer_products')->where('transfer_products.transfer_request_id',$id)
+      // ->leftJoin('products','products.id','=','transfer_products.product_id')
+      // ->leftJoin('transfer_confirm_products','transfer_confirm_products.product_code','=','transfer_products.product_code')
+      // ->select('transfer_products.*','products.*','transfer_confirm_products.*','transfer_products.product_qty as request_qty'
+      //  ,'transfer_confirm_products.product_qty as confirm_qty')
+      // ->get();
+      
+      // foreach ($data_products as $key => $value) {
+      //    $excelData[$i]['SlNo'] = $i;
+      //                           $excelData[$i]['PRODUCT CODE'] = $value2->tcn;
+      //                           $excelData[$i]['PRODUCT NAME'] = $value2->member_code;
+      //                           $excelData[$i]['DATE'] = date('d-m-Y',strtotime($value2->approval_date));
+      //                           $excelData[$i]['NAME'] = $value2->member_name;
+      //                           $excelData[$i]['AMOUNT'] = $value2->amount;
+      //                           $excelData[$i]['CURRENCY'] = $value2->currency_type;
+      //                           $excelData[$i]['AMOUNT(INR)']=$value2->inr_amount;
+      //                           $excelData[$i]['MODE'] = $value2->mode;
+      //                           $excelData[$i]['MOBILE'] = $value2->memeber_mobile;
+      //                           $excelData[$i]['DSA'] = ($value1->under=='DSA')?$value2->agent->dsaname.'('.$value2->agent->code.')':'';
+      //                           $excelData[$i]['INTRO 0.5%'] = ($_incentiveMaster[0]->salary+round($totalAmt));
+      //                           $excelData[$i]['Remarks'] = ($value1->under=='DSA')?'YES':'NO';
+      //                           $i++;
+      // }
+      // $_array_data = array();
+
+      
+    //  Excel::create($pagename, function($excel) use ($excelData,$pagename,$lastcell,$_array_data) {
+    //   $excel->sheet('mySheet', function($sheet) use ($excelData,$pagename,$lastcell,$_array_data)
+    //       {
+    //     $sheet->fromArray($excelData);
+    //     $sheet->cell('A1:M1', function($cell) {
+    //                     $cell->setFontSize(11);
+    //                     $cell->setBackground('#7cde9c');
+    //                     $cell->setFontWeight('bold');
+    //                     $cell->setAlignment('center');
+
+    //                 });
+    //                 $sheet->setFreeze('A2');
+    //                 $sheet->prependRow(1, array(
+    //                     $pagename
+    //                 ));
+    //                 $sheet->mergeCells('A1:M1');
+    //                 $sheet->cell('A1:M1', function($cell) {
+    //                     $cell->setFontSize(12);
+    //                     $cell->setBackground('#43a061');
+    //                     $cell->setFontWeight('bold');
+    //                     $cell->setAlignment('center');
+
+    //                 });
+    //                 $sheet->cell($lastcell, function($cell) {
+    //                     $cell->setFontSize(12);
+    //                     $cell->setFontWeight('thin');
+    //                     $cell->setAlignment('center');
+
+    //                 });
+
+    //                 $sheet->setPageMargin(array(
+    //                     0.25, 0.30, 0.25, 0.30
+    //                 ));
+
+    //                 $sheet->appendRow(array('','','','','','',
+    //                     'Achieve(ME)',$_array_data['achieve_me']
+    //                 ));
+    //                  $sheet->appendRow(array('','','','','','',
+    //                     'Achieve(DSA)',$_array_data['achive_dsa']
+    //                 ));
+    //                 $sheet->appendRow(array('','','','','','',
+    //                     'Incentive(ME-'.$_array_data['target_per'].'%)',$_array_data['me_incentive']
+    //                 ));
+    //                 $sheet->appendRow(array('','','','','','',
+    //                     'Incentive(DSA-0.5%)',$_array_data['dsa_incentive']
+    //                 ));
+    //                 $sheet->appendRow(array('','','','','','',
+    //                     'Salary(ME)',$_array_data['salary']
+    //                 ));
+    //                 $sheet->appendRow(array('','','','','','',
+    //                     'Total(Amt)',$_array_data['total']
+    //                 ));
+    //       });
+    // })->download('xls');
+
+    }
+}

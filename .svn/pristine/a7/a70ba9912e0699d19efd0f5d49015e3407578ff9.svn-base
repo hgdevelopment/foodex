@@ -1,0 +1,97 @@
+<?php
+
+
+/*
+|--------------------------------------------------------------------------
+| Web Routes
+|--------------------------------------------------------------------------
+|
+| Here is where you can register web routes for your application. These
+| routes are loaded by the RouteServiceProvider within a group which
+| contains the "web" middleware group. Now create something great! 
+|
+*/
+Route::get('MarkAllSeen' ,'NotificationController@AllSeen');
+
+Route::get('/', 'auth\LoginController@showLoginForm');
+Route::post('login', ['as'=>'login','uses'=>'auth\LoginController@login']);
+Route::get('/logout', ['as'=>'logout','uses'=>'auth\LoginController@logout']);  
+
+Route::group(['middleware' => ['admin']], function () 
+{
+    Route::get('admin/dashboard', ['as'=>'admin.dashboard','uses'=>'admin\pageController@index']);
+    Route::resource('admin/addSales','admin\SalesController');
+    Route::resource('admin/addProducts','admin\ProductController');
+    Route::resource('admin/addBrand','admin\BrandController');
+    Route::resource('admin/addBranch','admin\BranchController');
+    Route::resource('admin/addUnit','admin\UnitController');
+    Route::resource('admin/addUser','admin\UserController');
+    Route::resource('admin/addRequest','admin\addRequestController');
+    Route::resource('admin/expiredproduct','admin\expiredproductController');
+    Route::resource('admin/purchase','admin\PurchaseController');
+    
+    Route::post('admin/purchase/select2/product','admin\PurchaseController@product_select');
+    Route::post('admin/purchase/excel_upload','admin\PurchaseController@excel_upload');
+
+    Route::get('admin/stock/list','admin\StockController@stocklist');
+    Route::get('admin/stock/list/datatable','admin\StockController@stock_DataTable');
+    Route::get('admin/stock/request','admin\StockTransferController@stock_request');
+    Route::get('admin/stock/datatable/request','admin\StockTransferController@stock_request_datatable');
+    Route::get('admin/stock/datatable/recieve','admin\StockTransferController@stock_recieve_datatable');
+    Route::post('admin/stock/batchnumber','admin\StockTransferController@get_batch');
+    Route::post('admin/stock/products','admin\StockTransferController@product_select');
+    Route::post('admin/stock/request/send','admin\StockTransferController@stock_request_store');
+    Route::get('admin/stock/request/list','admin\StockTransferController@stock_request_list');
+    Route::get('admin/stock/request/view/{id}','admin\StockTransferController@stock_request_view');
+    Route::get('admin/stock/request/confirm/{id}','admin\StockTransferController@stock_request_confirm');
+    Route::get('admin/stock/request/excel/{id}','admin\StockTransferController@excel_report');
+    Route::post('admin/stock/batchnumber/qry_avl','admin\StockTransferController@get_batch_qtyAvl');
+    Route::post('admin/stock/request/confirm','admin\StockTransferController@stock_confirm');
+    Route::get('admin/stock/transferStockPrint/{id}','admin\StockTransferController@transferStockPrint');
+
+    Route::post('admin/stock/request/confirm/instock','admin\StockTransferController@stock_confirm_instock');
+    Route::resource('admin/damageproduct/damaged_product','admin\damagedproductController');
+    Route::post('admin/damageproduct/damaged_product_select','admin\damagedproductController@product_select');
+    
+   
+/****** priya *******/
+
+    Route::post('autocomplete/product_details','admin\OrderRequestController@stockDetails'); // display Stock In Select Box
+    Route::get('/product/expiry_date','admin\OrderRequestController@checkExpiryDate');// Check Expiry Date
+    Route::get('/product/quantity_details','admin\OrderRequestController@quantityDetails'); // Check Available quantity
+    Route::get('/admin/updateOrder/cancel_product','admin\updateOrderController@destroy'); // Cancel Order Product
+    Route::get('/product/update_product/new','admin\updateOrderController@store'); // Update New paroduct
+    Route::get('/admin/updateOrder/{id}/confirm_order','admin\updateOrderController@confirm_order'); // Order Confirm
+    Route::get('/admin/updateOrder/{id}','admin\updateOrderController@show'); // Order Confirm
+    Route::get('admin/updateOrderDelete','admin\viewOrderController@destroy'); // Delete Bill
+    Route::get('admin/viewOrderConfirm','admin\viewOrderController@create'); // view Order Confirm
+    Route::resource('admin/addOrder','admin\OrderRequestController');
+    Route::resource('admin/viewOrder','admin\viewOrderController');
+    Route::resource('admin/updateOrder','admin\updateOrderController');
+
+    Route::get('/admin/orderSales/{id}','admin\updateOrderConfirmController@orderSales'); // Bill Print
+    Route::get('/admin/updateOrderConfirm/cancel_product','admin\updateOrderConfirmController@destroy'); // Cancel Order Product
+    Route::get('/product/updateCongirmproduct/new','admin\updateOrderConfirmController@store'); // Update New paroduct in confirm product
+    Route::get('/admin/updateOrderConfirm/{id}','admin\updateOrderConfirmController@show'); // Order Confirm
+    Route::post('autocomplete/product_details/sales','admin\SalesController@stockDetails'); // display Stock In Select Box
+    Route::resource('admin/addSales','admin\SalesController');
+    Route::resource('admin/updateConfirm','admin\updateOrderConfirmController');
+
+    Route::get('admin/deleteBill','admin\exchangeBillController@create'); // view Delete Bill
+    Route::get('/admin/updateAmount/{id}','admin\viewCreditController@show'); // update amount blade page
+    Route::get('/admin/exchange_product/{id}','admin\exchangeBillController@show'); // update amount blade page
+    Route::get('/admin/exchangeBill/exchange_product','admin\exchangeBillController@destroy'); // exchange Product
+    Route::get('/exchange_product/update','admin\exchangeBillController@store'); // Update New paroduct in confirm product
+    Route::resource('admin/updatecreditBill','admin\viewCreditController');
+    Route::resource('admin/salesBill','admin\exchangeBillController');
+
+
+    /******Sales Reports********/
+    Route::resource('admin/report','admin\reportController');
+
+    /***** Stock Repots ******/
+
+    Route::resource('admin/stockReport','admin\stockReportController');
+
+
+});

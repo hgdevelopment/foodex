@@ -1,0 +1,106 @@
+<?php
+
+namespace App\Http\Controllers\admin;
+
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use Auth;
+use Session;
+use DB;
+class expiredproductController extends Controller
+{
+    /**
+     * Display a listing of the resource.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function index()
+    {
+        $current=date("Y-m-d");
+        $branchid = Auth::guard('admin')->user()->branch;
+        if($branchid==0){
+        $products = \DB::table('purchase_products')->whereDate('purchase_products.expiry_date','<=',$current)
+        ->join('products','products.id','=','product_id')
+        ->join('purchase_orders','purchase_orders.id','=','purchase_products.order_id')
+        ->join('branches','branches.id','=','products.added_branch')
+        ->select('products.product_number','products.product_name','purchase_orders.purchase_no','purchase_products.product_qty','purchase_products.expiry_date','branches.branch_name','products.basic_cost','products.product_discount','products.product_gst','products.billing_price')
+        ->get();
+        }
+        else{
+        $products = \DB::table('purchase_products')->whereDate('purchase_products.expiry_date','<=',$current)->where('purchase_products.branch_id','=',$branchid)
+        ->join('products','products.id','=','product_id')
+        ->join('purchase_orders','purchase_orders.id','=','purchase_products.order_id')
+        ->join('branches','branches.id','=','products.added_branch')
+        ->select('products.product_number','products.product_name','purchase_orders.purchase_no','purchase_products.product_qty','purchase_products.expiry_date','branches.branch_name','products.basic_cost','products.product_discount','products.product_gst','products.billing_price')
+        ->get();
+        }    
+        return view('admin.expiredproduct.index', compact('products'));
+    }
+
+    /**
+     * Show the form for creating a new resource.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function create()
+    {
+        //
+
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function store(Request $request)
+    {
+        
+    }
+
+    /**
+     * Display the specified resource.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function show($id)
+    {
+        //
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function edit($id)
+    {
+        
+    }
+
+    /**
+     * Update the specified resource in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function update(Request $request, $id)
+    {
+        
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function destroy($id)
+    {
+        
+    }
+}

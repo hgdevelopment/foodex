@@ -1,0 +1,83 @@
+<?php
+
+namespace App\Http\Controllers\admin;
+
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use Auth;
+use Session;
+use DB;
+class expiredproductController extends Controller
+{
+    /**
+     * Display a listing of the resource.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function index()
+    {
+        $daystosum = '';
+        $current=date("Y-m-d");
+        $branchid = Auth::guard('admin')->user()->branch;   
+        $products = \DB::table('purchase_products')->whereDate('purchase_products.expiry_date','<=',$current)
+        ->join('products','products.id','=','product_id')
+        ->join('purchase_orders','purchase_orders.id','=','purchase_products.order_id')
+        ->join('branches','branches.id','=','products.added_branch')
+        ->select('products.product_number','products.product_name','purchase_orders.purchase_no','purchase_products.product_qty','purchase_products.expiry_date','branches.branch_name','products.basic_cost','products.product_discount','products.product_gst','products.billing_price');         
+        if($branchid != 0)
+        {
+        $query = $products->where('branches.id', $branch);
+        }
+        $products = $products->get(); 
+        return view('admin.expiredproduct.index', compact('products','daystosum'));
+    }
+
+
+   public function seven()
+    {
+        $mydate = date("Y-m-d");
+        $daystosum = '7';      
+        $current = date('Y-m-d', strtotime($mydate.' + '.$daystosum.' days'));     
+        $branchid = Auth::guard('admin')->user()->branch;                                   
+        $products = \DB::table('purchase_products')
+        ->whereDate('purchase_products.expiry_date','=',$current)
+        ->join('products','products.id','=','product_id')
+        ->join('purchase_orders','purchase_orders.id','=','purchase_products.order_id')
+        ->join('branches','branches.id','=','products.added_branch')
+        ->select('products.id','products.product_number','products.product_name','purchase_orders.purchase_no','purchase_products.product_qty','purchase_products.expiry_date','branches.branch_name','products.basic_cost','products.product_discount','products.product_gst','products.billing_price');
+        if($branchid != 0)
+        {
+        $query = $products->where('branches.id', $branch);
+        }
+        $products = $products->get(); 
+
+        return view('admin.expiredproduct.index', compact('products','daystosum'));
+
+    }
+
+     public function fifteen()
+    {
+        $mydate = date("Y-m-d");
+        $daystosum = '15';      
+        $current = date('Y-m-d', strtotime($mydate.' + '.$daystosum.' days'));     
+        $branchid = Auth::guard('admin')->user()->branch;                                   
+        $products = \DB::table('purchase_products')
+        ->whereDate('purchase_products.expiry_date','=',$current)
+        ->join('products','products.id','=','product_id')
+        ->join('purchase_orders','purchase_orders.id','=','purchase_products.order_id')
+        ->join('branches','branches.id','=','products.added_branch')
+        ->select('products.id','products.product_number','products.product_name','purchase_orders.purchase_no','purchase_products.product_qty','purchase_products.expiry_date','branches.branch_name','products.basic_cost','products.product_discount','products.product_gst','products.billing_price');
+        if($branchid != 0)
+        {
+        $query = $products->where('branches.id', $branch);
+        }
+        $products = $products->get(); 
+        return view('admin.expiredproduct.index', compact('products','daystosum'));
+
+    }
+
+
+
+
+
+}

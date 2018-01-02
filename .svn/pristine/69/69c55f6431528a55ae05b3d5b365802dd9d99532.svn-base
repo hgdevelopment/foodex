@@ -1,0 +1,160 @@
+<?php
+namespace App\Http\Controllers\admin;
+use Illuminate\Http\Request;
+use App\Http\Requests;
+use App\Http\Controllers\Controller;
+use App\damagedproduct;
+use App\damage; 
+use App\Purchase_order;
+use App\Product;
+use App\Branch;
+use App\Purchase_product;
+use App\sales_product;
+use App\Transfer_request;
+use App\Transfer_product;
+use App\Transfer_confirm_product;
+use Auth;
+use DB;
+
+class damagedproductController extends Controller
+{
+  public $user;
+  public function __construct()
+  {
+  //
+  }
+
+  public function index()
+  {
+    $product = damagedproduct::leftjoin('damages','damages.id','=','damage_id')->leftjoin('products','products.id','=','damage_products.damage_id')->select('products.product_name as name','damages.*','damage_products.*')->get();
+    $purchase=Purchase_order::all();
+    $branch = branch::all();
+    return view('admin.damageproduct.damaged_product',compact('purchase','product','branch'));
+    //return redirect('/');
+  }
+
+  public function create()
+  {
+   
+  }
+
+  public function store(Request $request)
+  {
+    $user=Auth::guard('admin')->user()->id;
+    $id=DB::table('damages')->max('id');
+    if($id==null)
+    { 
+      $code=str_pad(1,10,"0",STR_PAD_LEFT);
+    }
+    else
+    {
+      $code=str_pad(($id+1),10,"0",STR_PAD_LEFT); 
+    }
+    $damage = new damage;
+    $damage->batch_no=$code;
+    $damage->branch_id=Auth::guard('admin')->user()->branch;
+    $damage->added_by=$user;
+    $damage->save();
+    $damage_id=$damage->id;
+
+    for ($i=0; $i<count($request->product); $i++)
+    {
+      if($request->product[$i]!='')
+      {
+        $damage_product= new damagedproduct;
+        $damage_product->damage_id= $damage_id;
+        $damage_product->batch_id=$request->batchno[$i];
+        $damage_product->product_id=$request->product[$i];
+        $damage_product->product_qty=$request->qty[$i];
+        $damage_product->branch_id=Auth::guard('admin')->user()->branch;
+        $damage_product->save();
+      }    
+    } 
+    return response()->json(['result'=>true,'msg'=>'successfully']);
+  }
+
+  public function product_select(Request $request)
+  {
+
+     $data= Product::where('products.added_branch',Auth::guard('admin')->user()->branch)
+    ->where(function( $query ) use ($request)
+    {
+      $query->where('products.product_number', 'LIKE', '%'.$request->search.'%')
+      ->orWhere('products.product_name', 'LIKE', '%'.$request->search.'%');
+    })
+    ->rightJoin('purchase_products','purchase_products.product_id','=','products.id')
+    ->where('purchase_products.order_id',$request->batchno)
+    ->select('purchase_products.product_id','products.id','purchase_products.order_id','purchase_products.product_qty','products.product_name')
+    ->get(); 
+    
+    $_make_array=[];
+    foreach ($data as $key => $value) 
+    { 
+      $quantity_out=0;
+      $sales=sales_product::where([
+      ['batch_id','=',$value->order_id],
+      ['branch_id','=',Auth::guard('admin')->user()->branch],
+      ['product_id','=',$value->product_id],
+      ['status','<>',"3"]
+      ])
+      ->select(DB::raw('SUM(product_qty) as quantity'))
+      ->groupBy('batch_id')
+      ->groupBy('product_id')
+      ->get();
+
+      $transfer=Transfer_confirm_product::where([
+      ['batch_id','=',$value->order_id],
+      ['to_branch','=',Auth::guard('admin')->user()->branch],
+      ['product_id','=',$value->product_id]
+      ])
+      ->select(DB::raw('SUM(product_qty) as quantity'))
+      ->groupBy('batch_id')
+      ->groupBy('product_id')
+      ->get();
+
+      $damagedproduct=damagedproduct::where([
+      ['batch_id','=',$value->order_id],
+      ['branch_id','=',Auth::guard('admin')->user()->branch],
+      ['product_id','=',$value->product_id]
+      ])
+      ->select(DB::raw('SUM(product_qty) as quantity'))
+      ->groupBy('batch_id')
+      ->groupBy('product_id')
+      ->get();
+
+      $avl_qty= Purchase_product::where([
+      ['order_id','=',$value->order_id],
+      ['product_id','=',$value->product_id],
+      ['branch_id','=',Auth::guard('admin')->user()->branch]
+      ])->get();
+
+      $avl_quantity=0;
+      foreach ($avl_qty as $key1 => $value1){
+        $avl_quantity+=$value1->product_qty;
+      }
+
+      foreach ($sales as $key1 => $value1){
+        $quantity_out+=$value1->quantity;
+      }
+
+      foreach ($transfer as $key1 => $value1){
+        $quantity_out+=$value1->quantity;
+      }
+
+      foreach ($damagedproduct as $key1 => $value1){
+        $quantity_out+=$value1->quantity;
+      }
+
+      $_make_array[]=['id'=>$value->id,
+      'text'=>$value->product_name,
+      'qty'=>$value->product_qty,
+      'available_quantity'=>($avl_quantity-$quantity_out)];
+    }
+
+    return response()->json(['results'=>$_make_array]);
+  } 
+  
+  public function view(){  
+  }
+}
+

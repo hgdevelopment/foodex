@@ -1,0 +1,183 @@
+<?php
+
+namespace App\Http\Controllers\admin;
+
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use App\Report;
+use App\branch;
+use Auth;
+use Session;
+use DB;
+class reportController extends Controller
+{
+    /**
+     * Display a listing of the resource.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function index()
+    {
+  
+    $branch = branch::all();
+        return view('admin.report.index',compact('branch'));
+    }
+
+    
+
+    /**
+     * Show the form for creating a new resource.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function create()
+    {
+        //
+
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function store(Request $request)
+    {       
+
+    	    if($request->type!='sales' && $request->type!='partial'  && $request->type!='ME' && $request->type!='credit')
+	    	{	
+				$report = \DB::table('payment_modes')
+                ->whereDate('payment_modes.paid_date','>=',$request->from)
+				->whereDate('payment_modes.paid_date','<=',$request->to)
+                ->where('payment_modes.payment_mode','=',$request->type)
+                ->where('payment_modes.status','=','normal')
+                ->where('payment_modes.deleted_at','=',NULL)
+              	->join('sales_orders','sales_orders.id','=','payment_modes.sales_id')
+                ->where('sales_orders.branch_id','=',$request->branch)
+				->join('customers','customers.id','=','sales_orders.customer_id')
+                ->join('sales_products','sales_products.sales_id','=','sales_orders.id')->where('sales_products.status','=','2')
+                ->join('branches','branches.id','=','sales_orders.branch_id')->groupBy('sales_products.sales_id')
+				->select('payment_modes.*','payment_modes.paid_date as date','sales_orders.bill_number','customers.customer_name','branches.*');          
+                $reports=$report->get();		
+    
+			}
+
+            if($request->type=='credit')
+            {   
+
+                $report = \DB::table('payment_modes')
+                ->whereDate('payment_modes.sales_date','>=',$request->from)
+                ->whereDate('payment_modes.sales_date','<=',$request->to)
+                ->where('payment_modes.payment_mode','=',$request->type)
+                ->where('payment_modes.status','=','normal')
+                ->where('payment_modes.deleted_at','=',NULL)
+                ->join('sales_orders','sales_orders.id','=','payment_modes.sales_id')
+                ->where('sales_orders.branch_id','=',$request->branch)
+                ->join('customers','customers.id','=','sales_orders.customer_id')
+                ->join('sales_products','sales_products.sales_id','=','sales_orders.id')->where('sales_products.status','=','2')
+                ->join('branches','branches.id','=','sales_orders.branch_id')->groupBy('sales_products.sales_id')
+                ->select('payment_modes.*','payment_modes.sales_date as date','sales_orders.bill_number','customers.customer_name','branches.*');          
+                $reports=$report->get();        
+    
+            }
+
+		if($request->type=='sales')
+			{
+
+				$report = \DB::table('sales_orders')
+				    ->where('sales_orders.branch_id','=',$request->branch)
+                    ->join('payment_modes','payment_modes.sales_id','=','sales_orders.id')
+                    ->whereDate('payment_modes.sales_date','>=',$request->from)
+                    ->whereDate('payment_modes.sales_date','<=',$request->to)
+				    ->join('sales_products','sales_orders.id','=','sales_products.sales_id')
+                    ->where('sales_products.status','=','2')
+                    ->join('branches','branches.id','=','sales_orders.branch_id')
+				    ->groupBy('sales_products.sales_id')
+				    ->select('sales_products.*','payment_modes.sales_date as date','sales_orders.*','branches.*',\DB::raw('SUM(sales_products.product_qty) as quantity'));			
+				$reports=$report->get();			
+			}
+            if($request->type=='partial')
+            {
+                 $report = \DB::table('payment_modes')
+                ->whereDate('payment_modes.paid_date','>=',$request->from)
+                ->whereDate('payment_modes.paid_date','<=',$request->to)
+                ->where('payment_modes.status','=',$request->type)
+                ->join('sales_orders','sales_orders.id','=','payment_modes.sales_id')->where('sales_orders.branch_id','=',$request->branch)
+                ->join('customers','customers.id','=','sales_orders.customer_id')
+                ->join('branches','branches.id','=','sales_orders.branch_id')
+                ->whereIn('payment_modes.sales_id', function($query) { $query->select('sales_id')->from('sales_products')->where('status', '=', '2'); })
+                ->select('payment_modes.*','payment_modes.paid_date as date','sales_orders.bill_number','customers.customer_name','branches.*');          
+               $reports=$report->get();
+                             
+            }
+
+        if($request->type=='ME' || $request->type=='master')
+            {
+               $report = \DB::table('payment_modes')->whereDate('payment_modes.paid_date','>=',$request->from)
+                ->whereDate('payment_modes.paid_date','<=',$request->to)
+                ->join('sales_orders','sales_orders.id','=','payment_modes.sales_id')->where('sales_orders.branch_id','=',$request->branch)                 
+                ->join('customers','customers.id','=','sales_orders.customer_id')
+                ->join('branches','branches.id','=','sales_orders.branch_id')         
+                ->whereIn('payment_modes.sales_id', function($query) { $query->select('sales_id')->from('sales_products')->where('status', '=', '2'); })
+                ->select('payment_modes.*','payment_modes.paid_date as date','sales_orders.bill_number','sales_orders.me_code','customers.customer_name','branches.*');
+                if($request->type=='ME')
+                {
+                $query = $report->where('sales_orders.me_code','=',$request->employee);
+                }          
+                return $reports=$report->get();
+               /* if($request->type=="ME")
+                $sum=$report->sum('payment_modes.total_amount'); */
+            }
+            
+        $branch = branch::all();
+		return view('admin.report.index',compact('request','reports','branch'));
+    }
+
+    /**
+     * Display the specified resource.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function show($id)
+    {
+        //
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function edit($id)
+    {
+        //
+        
+    }
+
+    /**
+     * Update the specified resource in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function update(Request $request, $id)
+    {
+        //
+       
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function destroy($id)
+    {
+        
+    }
+}

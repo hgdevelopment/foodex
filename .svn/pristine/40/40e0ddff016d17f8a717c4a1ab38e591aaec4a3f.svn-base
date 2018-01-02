@@ -1,0 +1,90 @@
+<?php
+
+namespace App\Http\Controllers\admin;
+
+use Illuminate\Http\Request;
+use App\Http\Requests;
+use App\Http\Controllers\Controller;
+use App\damagedproduct;
+use App\damage; 
+use App\Purchase_order;
+use App\Product;
+use Auth;
+use DB;
+
+class damagedproductController extends Controller
+{
+  public $user;
+  public function __construct()
+  {
+    //
+  }
+
+  public function index()
+  {
+    $purchase=Purchase_order::all();
+   
+    return view('admin.damageproduct.damaged_product',compact('purchase'));
+    
+    //return redirect('/');
+  }
+
+  public function create()
+  {
+    //
+  }
+
+  public function store(Request $request)
+  {
+    $id=DB::table('damage_products')->max('id');
+    if($id==null)
+    { 
+      $code=str_pad(1,10,"0",STR_PAD_LEFT);
+    }
+    else
+    {
+      $code=str_pad(($id+1),10,"0",STR_PAD_LEFT); 
+    }
+    $damage = new damage;
+    $damage->batch_no=$code;
+    $damage->branch_id=Auth::guard('admin')->user()->branch;
+    $damage->save();
+ 
+    for ($i=0; $i<count($request->product); $i++ )
+    {
+      if($request->product[$i]!='')
+      {
+        $damage_product= new damage_products;
+        $damage_product->product_id=$request->product[$i];
+        $damage_product->product_qty=$request->qty[$i];
+        $damage_product->save();
+      }
+    }
+    return response()->json(['result'=>true,'msg'=>'successfully']);
+  }
+
+
+  public function product_select(Request $request)
+  {
+    $data= Product::where('products.added_branch',Auth::guard('admin')->user()->branch)
+    ->where(function( $query ) use ($request)
+    {
+      $query->where('products.product_number', 'LIKE', '%'.$request->search.'%')
+      ->orWhere('products.product_name', 'LIKE', '%'.$request->search.'%');
+    })
+    ->rightJoin('purchase_products','purchase_products.product_id','=','products.id')
+    ->where('purchase_products.order_id',$request->batchno)
+    ->get();
+    
+    $_make_array=[];
+    foreach ($data as $key => $value) 
+    {
+      $_make_array[]=['id'=>$value->id,
+      'text'=>$value->product_name,
+      'qty'=>$value->product_qty];
+    }
+    
+    return response()->json(['results'=>$_make_array]);
+  } 
+}
+

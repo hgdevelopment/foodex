@@ -1,0 +1,398 @@
+<?php $__env->startSection('sidebar'); ?>
+	<?php echo $__env->make('admin.partial.header', array_except(get_defined_vars(), array('__data', '__path')))->render(); ?>
+	<?php echo $__env->make('admin.partial.aside', array_except(get_defined_vars(), array('__data', '__path')))->render(); ?>
+<?php $__env->stopSection(); ?>
+
+
+<?php $__env->startSection('body'); ?>
+<link href="<?php echo e(URL::asset('assets/plugins/bootstrap-material-datetimepicker/css/bootstrap-material-datetimepicker.css')); ?>" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.4/css/select2.min.css" rel="stylesheet" />
+<style>
+	.select2-selection{
+	padding: .5rem .75rem;
+    font-size: 1rem;
+    line-height: 1.25;
+    min-height: 38px;
+	}
+	.select2-container--default .select2-selection--single .select2-selection__arrow {
+   
+    top: 6px;
+    right: 4px;
+}
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    color: #444;
+    line-height: 22px;
+}
+.bigdrop{
+    /* max-width: 200px !important;*/
+}
+</style>
+<div class="container-fluid">
+	<div class="row page-titles">
+		<div class="col-md-5 col-8 align-self-center">
+			<h2 class="text-themecolor m-b-0 m-t-0">Stock Request</h2>
+		</div>
+	</div>
+	<form method="post" action="#" id="purchase_order_form"> 
+		<div class="container-fluid">
+			<div class="row">
+				<div class="col-md-12">
+					<div class="card">
+						<div class="card-block">							
+							<div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label>Request No</label>
+                                        <input type="hidden" name="product_request_id" id="product_request_id" value="<?php echo e($id); ?>" />
+                                        <input type="hidden" name="request_from_branch" id="request_from_branch" value="<?php echo e($data->requested_from_branch); ?>" />
+                                        <input type="text" readonly  class="form-control form-control-line" name="from_branch" value="<?php echo e($data->transfer_code); ?>">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label>Request From</label>
+                                        <input type="text" readonly  class="form-control form-control-line" name="from_branch" value="<?php echo e($data->branch_name); ?>">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label>Requested By</label>
+                                        <input type="text"  class="form-control form-control-line"  value="<?php echo e($data->employee_name); ?>" readonly>
+                                    </div>
+                                </div>
+							</div>							
+						</div>
+					</div>
+				</div>
+			</div>
+<?php echo e(csrf_field()); ?>
+
+			<div class="row">
+				<div class="col-lg-12">
+					<div class="card">
+						<div class="card-block">
+							<span class="unique_value">**The Products must be unique</span>
+							<div class="table-responsive">
+								<table class="table">
+									<thead>
+										<tr>
+                                            <th>Product</th>
+                                            <th>Select Batch</th>
+                                            <th>Requested Quantity</th>
+                                            <th>Available Quantity</th>
+											<th>Quantity</th>
+                                            <th>Status</th>
+											<th></th>
+										</tr>
+									</thead>
+									<tbody id="add_products">	
+                                    <?php $__currentLoopData = $data_products; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $element): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>           
+                                        <tr >
+                                            <td>
+                                            <input type="hidden" name="product_code[]" id="product_code" value="<?php echo e($element->product_number); ?>" />
+                                            <input type="hidden" name="product_id[]" id="product_id" value="<?php echo e($element->product_id); ?>" />
+                                            <input type="text" class="form-control product" name="product[]" data-product-no="<?php echo e($element->product_number); ?>" data-product-id="<?php echo e($element->product_id); ?>" readonly value="<?php echo e($element->product_name); ?>" />
+                                            </td>
+                                            <td>
+                                            <select name="batch_no[]" id="batch_no" class="form-control product" style="width: 100%">
+                                            </select>
+                                            </td>
+                                            
+                                            <td><input type="text"  class="form-control form-control-line" name="req_qty[]" id="qty" value="<?php echo e($element->product_qty); ?>" readonly></td>
+                                            <td><input type="text"  class="form-control form-control-line" name="avl_qty[]" id="qty" value="" readonly></td>
+                                            <td><input type="text"  class="form-control form-control-line" name="qty[]" id="qty" value=""></td>
+                                            <td><select name="status[]" id="status" class="form-control product" style="width: 100%">
+                                                <option value="1">Confirm</option>
+                                                <option value="2">Cancel</option>
+                                            </select></td>
+                                            <td></td>
+                                        </tr>
+                                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?> 									
+										<tr class="hide" id="hidden_prodect">
+                                            <td>
+                                            <input type="text" class="form-control product" name="product[]" data-product-no="" data-product-id="" readonly value="" />
+                                            </td>
+                                            <td>
+                                            <select name="batch_no[]" id="batch_no" class="form-control product" style="width: 100%">
+                                            </select>
+                                            </td>
+											
+											<td><input type="text"  class="form-control form-control-line" name="qty[]" id="qty"></td>
+                                            <td><select name="status[]" id="status" class="form-control product" style="width: 100%">
+                                                <option value="1">Confirm</option>
+                                                <option value="1">Cancel</option>
+                                            </select></td>
+											<td><button type="button" class="remove-product btn btn-circle btn-sm btn-danger waves-effect waves-dark" id="add_values">-</button></td>
+										</tr>
+									</tbody>
+								</table>
+							</div>
+						<hr>							
+					</div>
+				</div>
+			</div>
+				<div class="col-lg-12 col-md-12">
+					<div class="card">
+						<div class="card-block">							
+							<div class="row">
+								<div class="col-lg-12 col-xlg-12 col-md-12">
+									<div class="form-group">
+										<div class="col-sm-12">											
+											<input type="submit" class="btn btn-success pull-right" style="margin-right:2%" value="Submit" name="submit">
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</form>
+</div>
+<?php $__env->stopSection(); ?>
+<?php $__env->startSection('jquery'); ?>
+<script type="text/javascript" src="//cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+<script type="text/javascript" src="//cdn.jsdelivr.net/bootstrap.daterangepicker/2/daterangepicker.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.4/js/select2.full.min.js"></script>
+<script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+<script src="<?php echo e(URL::asset('assets/plugins/bootstrap-material-datetimepicker/js/bootstrap-material-datetimepicker.js')); ?>"></script>
+<script src="<?php echo e(URL::asset('assets/plugins/bootstrap-datepicker/bootstrap-datepicker.min.js')); ?>"></script>
+<script src="<?php echo e(URL::asset('js/wizard/jquery.bootstrap.wizard.min.js')); ?>"></script>
+<script src="<?php echo e(URL::asset('js/wizard/form_wizard.js')); ?>"></script>
+<script src="<?php echo e(URL::asset('js/purchase/purchase_order.js')); ?>"></script>
+<script>
+	$(function(){
+
+		var initLoad=true;
+		var revalidateForm=function(){
+			$('#purchase_order_form').formValidation('revalidateField', 'product[]');
+            $('#purchase_order_form').formValidation('revalidateField', 'qty[]');
+            // $('#purchase_order_form').formValidation('revalidateField', 'billing[]');
+		}
+		var mrp_calculate=function(base_amt,gst){
+							 gst=(gst==null|| gst==NaN || gst=='')?0:parseFloat(gst);
+							 base_amt=(base_amt==null|| base_amt==NaN || base_amt=='')?0:parseFloat(base_amt);
+					         var mrp=((base_amt*gst)/100)+base_amt;
+					         return mrp;
+		                   };
+		
+      $('select[name="batch_no[]"]').select2({
+                              placeholder: 'Select an product',
+                              containerCssClass : 'bigdrop',
+                                   ajax: {
+                                        url: '<?php echo e(URL::to('/')); ?>/admin/stock/batchnumber/qry_avl',
+                                        dataType: 'json',
+                                        method:'post',
+                                        data:function (params) {
+                                              var query = {
+                                                search: params.term,
+                                                product_no:$(this).parents('tr').find('input[name="product[]"]').attr('data-product-no'),
+                                                product_id:$(this).parents('tr').find('input[name="product[]"]').attr('data-product-id'),
+                                                type: 'public',
+                                                _token:'<?php echo e(csrf_token()); ?>',
+                                              }
+
+                                              return query;
+                                            }
+                                      }
+                                    }).on('select2:select', function (e) {      
+                                            var data = e.params.data;
+                                            $(this).parents('tr').find('input[name="avl_qty[]"]').val(data.available_quantity);
+                                            $('input[name="qty[]"]').trigger('input');
+                                           // revalidateForm();
+                                        });
+        $('input[name="qty[]"]').on('input',function(e){
+          var avl=parseInt($(this).parents('tr').find('input[name="avl_qty[]"]').val());
+          var qty=parseInt($(this).val());
+          if(avl<qty){
+            alert('Stock not a available');
+            $(this).val('');
+            return;
+          }
+        });
+
+		$('#purchase_order_form')
+        .formValidation({
+	        framework: 'bootstrap',
+	        // err: {
+	        //     container: 'tooltip'
+	        // },
+	        row: {
+	            selector: 'td'
+	        },
+	        icon: {
+	            valid: 'glyphicon glyphicon-ok',
+	            invalid: 'glyphicon glyphicon-remove',
+	            validating: 'glyphicon glyphicon-refresh'
+	        },
+            fields: {
+                'product[]': {
+                  // row: '.form-group',
+                   validators: {
+                         notEmpty: {
+                            message: 'Product is required'
+                        },
+                        callback: {
+                        callback: function(value, validator, $field) {
+                            var $emails          = validator.getFieldElements('product[]'),
+                                numEmails        = $emails.length,
+                                notEmptyCount    = 0,
+                                obj              = {},
+                                duplicateRemoved = [];
+
+                            for (var i = 0; i < numEmails-1; i++) {
+                                var v = $emails.eq(i).val();
+                                if (v !== '') {
+                                    obj[v] = 0;
+                                    notEmptyCount++;
+                                }
+                            }
+
+                            for (i in obj) {
+                                duplicateRemoved.push(obj[i]);
+                            }
+
+                            // if (duplicateRemoved.length === 0) {
+                            //     return {
+                            //         valid: false,
+                            //         message: 'You must fill at least one email address'
+                            //     };
+                            // } else 
+                            if (duplicateRemoved.length !== notEmptyCount) {
+                            	$('.unique_value').html('*The Products must be unique')
+                                return {
+                                    valid: false,
+                                    message: '**'
+                                };
+                            }
+
+                            validator.updateStatus('product[]', validator.STATUS_VALID, 'callback');
+                            $('.unique_value').html('')
+                            return true;
+                        }
+                    }
+                
+                    }
+                },
+                'qty[]': {
+                	// row: '.form-group',
+                    validators: {
+                        notEmpty: {
+                            message: 'Quantity is required'
+                        },
+                         numeric: {
+                            message: 'The value is not a number',
+                        }
+                    }
+                },
+                'batch_no[]': {
+                    // row: '.form-group',
+                    validators: {
+                        notEmpty: {
+                            message: 'Batch No is required'
+                        }
+                    }
+                },
+                
+                
+            }
+        })
+
+        // Add button click handler
+        .on('click', '.add-more', function() {
+            var $template = $('#hidden_prodect'),
+                $clone    = $template
+                                .clone()
+                                .removeClass('hide')
+                                .removeAttr('id')
+                                .insertBefore($template);
+                           if(initLoad==true)
+                           {
+                           	$clone.find('.remove-product').remove();
+                           	initLoad=false;
+                           }
+                           //batchnumber
+                           $clone.find('select[name="batch_no[]"]').select2({
+                              placeholder: 'Select an product',
+                              containerCssClass : 'bigdrop',
+                                   ajax: {
+                                        url: '<?php echo e(URL::to('/')); ?>/admin/stock/batchnumber',
+                                        dataType: 'json',
+                                        method:'post',
+                                        data:function (params) {
+                                              var query = {
+                                                search: params.term,
+                                                type: 'public',
+                                                _token:'<?php echo e(csrf_token()); ?>',
+                                              }
+
+                                              return query;
+                                            }
+                                      }
+                                    }).on('select2:select', function (e) {      
+                                            var data = e.params.data;
+                                            revalidateForm();
+                                        });
+                         
+           $('#purchase_order_form')
+                .formValidation('addField', $clone.find('[name="product[]"]'))
+                .formValidation('addField', $clone.find('[name="qty[]"]'))
+                .formValidation('addField', $clone.find('[name="batch_no[]"]'))
+                //change event
+            })
+
+        // Remove button click handler
+        .on('click', '.remove-product', function() {
+            var $row = $(this).closest('tr');
+
+            // Remove fields
+            $('#purchase_order_form')
+                .formValidation('removeField', $row.find('[name="product[]"]'))
+                .formValidation('removeField', $row.find('[name="batch_no[]"]'))
+                .formValidation('removeField', $row.find('[name="qty[]"]'));
+          
+            // Remove element containing the fields
+            $row.remove();
+        }).on('success.form.fv', function(e) {
+            e.preventDefault();
+
+            var $form = $(e.target),
+                fv    = $form.data('formValidation');
+
+             var form = $('#purchase_order_form')[0]; 
+                     var data = new FormData(form);
+                     console.log(data);
+                     $.ajax({
+                            url: '<?php echo e(URL::to('/')); ?>/admin/stock/request/confirm',
+                            method: 'POST',
+                            data: data,
+                            success: function(data){
+                              if(data.result){
+                                swal({ title: "Stock Transfer Confirmation!",
+                                            text: "success!",
+                                            type: "success" 
+                                            }).then(function() {
+                                               // location.reload();
+                                                window.location.href='<?php echo e(URL::to('/')); ?>/admin/stock/request/view/<?php echo e($id); ?>';
+                                            });
+                                
+                              }else{
+                                sweetAlert("Oops...",'' , "error");
+                              }
+                            },
+                            error: function(xhr, status, error){
+                            },
+                            processData: false,
+                            contentType: false
+                        });
+        });
+
+        
+     // $('.add-more').trigger('click');
+		
+	});
+</script>
+
+<?php $__env->stopSection(); ?>
+<?php echo $__env->make('admin.layout.puredrops', array_except(get_defined_vars(), array('__data', '__path')))->render(); ?>

@@ -1,0 +1,156 @@
+<?php
+
+namespace App\Http\Controllers\admin;
+
+use Illuminate\Http\Request;
+use App\Http\Requests;
+use App\Http\Controllers\Controller;
+use App\Product;
+use App\Purchase_order;
+use App\Purchase_product;
+use App\Unit;
+use App\Brand;
+use App\branch;
+use Carbon\Carbon;
+use Auth;
+use DB;
+use Excel;
+
+class StockReportController extends Controller
+{
+    /********************GET BLADE PAGES FOR  REPORTS***************/
+
+
+    public function show($report)
+    {
+            if( $report=='stockReport')
+                return view('admin.report.stock_report');
+
+            if( $report=='productwiseReport')
+                return view('admin.report.product_wise_report');
+
+            if( $report=='stockMovingReport')
+                return view('admin.report.stock_moving_report');
+
+            if( $report=='stockTransferReport')
+                return view('admin.report.stock_transfer_report');
+    }
+
+
+
+    /********************LIST STOCK REPORTS***************/
+
+    public function store(Request $request)
+    {
+
+
+        /*****************Stock Report************/
+        /****************************************/
+
+        if( $request->report=='stockReport')
+        {
+        $branch     =   $request->branch;            
+        $fdate      =   $request->fdate;
+        $tdate      =   $request->tdate;
+        return view('admin.report.stock_report',compact('fdate','tdate','branch'));
+        }
+
+
+
+        /********Product wise Stock Report*******/
+        /****************************************/
+
+        if( $request->report=='productwiseReport')
+        {
+        $fdate      =   $request->fdate;
+        $tdate      =   $request->tdate;
+        $productIds =   $request->product;
+        $branch     =   $request->branch;
+
+        return view('admin.report.product_wise_report',compact('fdate','tdate','productIds','branch'));
+        }
+
+
+
+        /*************Stock Moving Report********/
+        /****************************************/
+
+        if( $request->report=='stockMovingReport')
+        {
+        $fdate      =   $request->fdate;
+        $tdate      =   $request->tdate;
+        $branch     =   $request->branch;
+        return view('admin.report.stock_moving_report',compact('fdate','tdate','branch'));
+        }
+
+        /*************Stock Transfer Report********/
+        /****************************************/
+
+        if( $request->report=='stockTransferReport')
+        {
+        $fdate      =   $request->fdate;
+        $tdate      =   $request->tdate;
+        $branch     =   $request->branch;
+        return view('admin.report.stock_transfer_report',compact('fdate','tdate','branch'));
+        }
+
+
+
+    }
+
+
+    /********************PRINT STOCK REPORTS***************/
+    /*ALL PRINT  REPORTS***********************************/
+
+
+    public function update(Request $request,$id)
+    {
+
+
+        if( $request->report=='stockReport')
+        {
+
+        $branch=$request->branch;            
+        $fdate=$request->fdate;
+        $tdate=$request->tdate;
+
+        return view('admin.report.print_stock_report',compact('branch','fdate','tdate'));
+
+        }
+
+        if( $request->report=='stockMovingReport')
+        {
+
+        $branch=$request->branch;            
+        $fdate=$request->fdate;
+        $tdate=$request->tdate;
+
+        return view('admin.report.print_stock_moving_report',compact('branch','fdate','tdate'));
+
+        }
+
+        if( $request->report=='stockTransferReport')
+        {
+
+        $branch=$request->branch;            
+        $fdate=$request->fdate;
+        $tdate=$request->tdate;
+
+        return view('admin.report.print_stock_transfer_report',compact('branch','fdate','tdate'));
+
+        }
+
+    }
+
+
+
+    public function create(Request $request)
+    {
+
+        $data=Product::where('added_branch',$request->branch)->orderBy('id','ASC')->get();
+        return $data;
+
+    }
+
+
+}

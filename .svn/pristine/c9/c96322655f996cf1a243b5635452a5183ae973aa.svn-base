@@ -1,0 +1,24 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Foundation\Bus\DispatchesJobs;
+use Illuminate\Routing\Controller as BaseController;
+use Illuminate\Foundation\Validation\ValidatesRequests;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Auth;
+use DB;
+class Controller extends BaseController
+{
+    use AuthorizesRequests, DispatchesJobs, ValidatesRequests;
+	// public static function logReport($type,$report)
+	// {
+ //        $log = new log();
+ //        $log->ip_address =  \Request::getClientIp(true);
+ //        $log->user = session('userId');
+ //        $log->actions = $report;
+ //        $log->type = $type;
+ //        $query = $log->save();
+	// }
+}

@@ -1,0 +1,164 @@
+<?php
+
+namespace App\Http\Controllers\admin;
+
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use URL;
+use App\Product;
+use App\Purchase_product;
+use App\Purchase_order;
+use App\sales_product;
+use App\sales_order;
+use App\payment_mode;
+use App\customer;
+use Carbon\Carbon;
+use App\User;
+use DB;
+use Auth;
+use Alert;
+
+class viewCreditController extends Controller
+{
+    /**
+     * Display a listing of the resource.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function index()
+    {
+        $branch_id=Auth::guard('admin')->user()->branch;
+        
+
+       $view_order = sales_order::join("customers","customers.id","=","sales_orders.customer_id")
+                                ->join("payment_modes","payment_modes.sales_id","=","sales_orders.id")
+                                ->where("sales_orders.branch_id",$branch_id)
+                                ->where('payment_modes.payment_mode','=','credit')
+                                ->where('payment_modes.balance','!=','0')
+                                ->where('deleted_at', null)
+                                ->select('customers.customer_name as customer_name','sales_orders.id as orderId','sales_orders.*', DB::raw('SUM(paid_amount) as total_paid_amount'))
+                                ->orWhere('payment_modes.status','=','partial')
+                                ->groupBy('payment_modes.sales_id')->orderBy('payment_modes.updated_at','ASC')->get();
+                                foreach ($view_order as $order) {
+                                   $sales_id1 = $order->orderId;
+                                $credit_paid = payment_mode::select('balance',DB::raw('sum(paid_amount) as total'))->where('sales_id',$sales_id1)
+                                                            ->groupBy(DB::raw('sales_id'))->get();
+                                }
+                         
+                          
+        return view('admin.credit.view_credit',compact('view_order','credit_paid'));
+    }
+
+    /**
+     * Show the form for creating a new resource.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function create()
+    {
+       //
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function store(Request $request)
+    {
+        //
+    }
+
+    /**
+     * Display the specified resource.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function show($id)
+    {
+        $branch_id=Auth::guard('admin')->user()->branch;
+        $view_order=sales_order::join("customers","customers.id","=","sales_orders.customer_id")->where("sales_orders.branch_id",$branch_id)->where("sales_orders.id","=",$id)->select('customers.*','sales_orders.id as sales_id','sales_orders.*')->first();
+
+
+        $product_payment_details=sales_product::join('products','products.id','=','sales_products.product_id')
+         ->where("sales_products.branch_id",$branch_id)
+         ->where("sales_products.status","!=","3")
+         ->where("sales_products.status","!=","4")
+         ->where("sales_products.sales_id","=",$id)
+         ->select('products.product_name as name','sales_products.id as sales_ids','sales_products.*')
+         ->get();
+         $pay_details = payment_mode::where('sales_id',$id)->get();
+        $login_id=$view_order->addedById;
+        $sales_person=User::where("logins.id",$login_id)->first();
+        $total_amount=sales_product::where('sales_id',$id)->whereNotIn('status',['3'])->whereNotIn('status',['4'])->sum('mrp');
+        $total_paid_amount=payment_mode::where('sales_id',$id)->sum('paid_amount');
+        $total_balance_amount=payment_mode::where('sales_id',$id)->sum('balance');
+        $Po=Purchase_order::all();
+        $count=count($product_payment_details);
+
+        return view('admin.credit.updateAmount',compact('id','count','view_order','product_payment_details','sales_person','Po','product_name','total_amount','total_paid_amount','total_balance_amount','pay_details'));
+
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function edit($id)
+    {
+        //
+    }
+
+    /**
+     * Update the specified resource in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function update(Request $request, $id)
+    {
+
+        $payment_mode = payment_mode::where('sales_id',$id)->first();
+        $branch_id=Auth::guard('admin')->user()->branch;
+        $paid_date = Carbon::now();
+        $date=$paid_date->toDateString();
+            $payment_mode2 = new payment_mode;
+            $payment_mode2->sales_id = $id;
+            $payment_mode2->branch_id = $branch_id;
+            $payment_mode2->payment_mode = $request->payment_mode;
+            $payment_mode2->paid_amount = $request->paid_amount;
+            $payment_mode2->total_amount = $request->total_amount;
+            $payment_mode2->card_amount = $request->card;
+            $payment_mode2->transaction_number = $request->transaction_no;
+            $payment_mode2->reference_number = $request->reference_no;
+            $payment_mode2->account_number = $request->account_no;
+            $payment_mode2->cheque_number = $request->cheque_no;
+            $payment_mode2->balance = $request->balance;
+            $payment_mode2->status = $request->payment_type;
+            $payment_mode2->paid_date = date("Y-m-d", strtotime($request->paid_date));
+            $payment_mode2->save();
+
+            $type='Credit';
+        $report='Update Credit Or Partial Paid  Amount .Bill Number: '. $request->bill_number;
+        Controller::logReport($type,$report);
+
+        Alert::success('Update Successfully', 'Success');
+        return redirect('admin/salesBill');
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function destroy($id)
+    {
+        //
+    }
+}

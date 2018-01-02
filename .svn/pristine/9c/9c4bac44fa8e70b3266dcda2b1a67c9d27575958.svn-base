@@ -1,0 +1,247 @@
+@php
+use Illuminate\Http\Request;
+use App\Http\Requests;
+use App\Http\Controllers\Controller;
+use App\Product;
+use App\Purchase_order;
+use App\Purchase_product;
+use App\Sales_product;
+use App\damagedproduct;
+use App\Transfer_confirm_product;
+use App\Unit;
+use App\Brand;
+use Carbon\Carbon;
+use App\branch;
+$branches = branch::all();
+@endphp
+
+@extends('admin.layout.puredrops')
+@section('sidebar')
+	@include('admin.partial.header')
+	@include('admin.partial.aside')
+@endsection
+
+@section('body')
+
+<div class="container-fluid">
+
+	<div class="row page-titles">
+	<div class="col-md-5 col-8 align-self-center"> <h2 class="text-themecolor m-b-0 m-t-0">Stock Report</h2> </div>
+	</div>
+
+	<form  id="form" method="post" data-parsley-validate="" > 
+	<input type="hidden" name="report" value="stockReport">
+	{{ csrf_field() }}
+
+	<div id="printDiv"> </div>
+
+		<div class="container-fluid">
+			<div class="col-lg-12">
+			<div class="row">
+
+				@if(Auth::guard('admin')->user()->branch=='0')
+				
+				<label  class="control-label text-right ">Branch :</label>
+				<div class="col-lg-2">
+					<select class="form-control chosen-select" id="branch" required name="branch" style="width: 100%">
+
+					<option value="">Select Branch</option>
+					@foreach ($branches as $branches)
+					<option value="{{ $branches->id}}" @if(isset($branch) && $branch==$branches->id) {{ 'selected' }} @endif>{{ $branches->branch_name }}</option>
+					@endforeach
+
+					</select>
+				</div>
+
+				@else
+				<input type="hidden" id="branch"  name="branch" value="{{Auth::guard('admin')->user()->branch}}">
+				@endif
+
+
+				<label class="control-label text-right ">From :</label>
+				<div class="col-lg-2">
+					<input type="text"  value="{{ $fdate or date('d-m-Y')}}" name="fdate" id="fdate" class="form-control" readonly>  
+				</div>
+
+				<label class="control-label text-right ">To : </label>
+				<div class="col-lg-2">
+					<input type="text"  value="{{ $tdate or date('d-m-Y')}}" name="tdate" id="tdate" class="form-control" readonly>  
+				</div>
+				<div class="col-md-1 bounce animated">
+				<button type="submit" class="btn btn-primary"><i class="fa fa-search"></i> Search</button>
+				</div>
+				<div class="col-md-1 bounce animated">
+				<button type="button" onclick="print_stock_report()" class="btn btn-danger"><i class="mdi mdi-printer-settings"></i> Print</button>
+				</div>
+			</div>
+		</div>	
+		</div>		
+	</form>
+
+	<div class="container-fluid">
+		<div class="row">
+			<div class="col-lg-12">
+				<div class="card">
+					<div class="card-block">
+						
+						<div class="table-responsive">
+							<table id="table" class="table table-hover table-striped table-bordered" >
+								<thead>
+									<tr>
+										<th>Sl No</th>
+                                        <th>Product name</th>
+                                        <th>Product code</th>
+                                        <th>Unit</th>
+                                        <th>Opening stock</th>
+                                        <th><span class="text-primary">( {{ $fdate or 'From Date' }} </span> <br>Receive qty</th>
+                                        <th><span class="text-primary"> to </span><br>Item Sold</th>
+                                        <th><span class="text-primary"> {{ $tdate or 'To Date' }} )</span> <br>Damaged</th>
+                                        <th>Closing stock</th>
+                                    </tr>									
+                                </thead>
+                                @if(isset($fdate) && isset($tdate))
+								<tbody>
+								@php
+									$f_date=date('Y-m-d',strtotime($fdate));
+									$t_date=date('Y-m-d',strtotime($tdate));
+
+									if($branch  ==  '0')
+									   $branch 	=	Auth::guard('admin')->user()->branch;
+
+									 $products=Product::where('added_branch',$branch)->orderBy('id','ASC')->get();
+									 $i=1;
+								@endphp
+
+									@foreach($products as $product)
+
+									@php
+
+										$opening_product_qty  =	  Purchase_product::where('product_id',$product->id)
+																->where('branch_id',$branch)
+																->whereDate('created_at','<',$f_date)
+																->sum('product_qty');
+
+										$opening_sales_qty    =  Sales_product::where('product_id',$product->id)
+																->where('branch_id',$branch)
+																->whereDate('created_at','<',$f_date)
+																->whereIn('status',['0','1','2'])
+																->sum('product_qty');
+
+										$opening_damage_qty   =   damagedproduct::where('product_id',$product->id)
+																->where('branch_id',$branch)
+																->whereDate('created_at','<',$f_date)
+																->sum('product_qty');
+
+										$opening_transfer_qty =   Transfer_confirm_product::where('product_id',$product->id)
+																->where('from_branch',$branch)
+																->whereDate('created_at','<',$f_date)
+																->sum('product_qty');
+
+
+										$opening_stock=max($opening_product_qty-($opening_sales_qty+$opening_damage_qty+$opening_transfer_qty),0);	
+
+
+										$received_qty  		 =	  Purchase_product::where('product_id',$product->id)
+																->where('branch_id',$branch)
+																->whereDate('created_at','>=',$f_date)
+																->whereDate('created_at','<=',$t_date)
+																->sum('product_qty');
+
+
+										$sold_qty    		  =  Sales_product::where('product_id',$product->id)
+																->where('branch_id',$branch)
+																->whereDate('created_at','>=',$f_date)
+																->whereDate('created_at','<=',$t_date)
+																->whereIn('status',['0','1','2'])
+																->sum('product_qty');
+
+										$damaged_qty   		  =   damagedproduct::where('product_id',$product->id)
+																->where('branch_id',$branch)
+																->whereDate('created_at','>=',$f_date)
+																->whereDate('created_at','<=',$t_date)
+																->sum('product_qty');
+
+										$transfer_qty 		  =   Transfer_confirm_product::where('product_id',$product->id)
+																->where('from_branch',$branch)
+																->whereDate('created_at','>=',$f_date)
+																->whereDate('created_at','<=',$t_date)
+																->sum('product_qty');
+
+										$closing_stock=max(($opening_stock + $received_qty)-($sold_qty + $damaged_qty + $transfer_qty),0);
+
+									@endphp
+									<tr>
+									<td>{{ $i }}</td>
+
+									<td>{{ $product->product_name }}</td>
+
+									<td>{{ $product->product_number }}</td>
+
+									<td>{{ $product->unit->unit_name }}</td>
+
+									<td>{{ $opening_stock }}</td>
+
+									<td>{{ $received_qty }}</td>
+
+									<td>{{ $sold_qty }}</td>
+
+									<td>{{ $damaged_qty }}</td>
+
+									<td>{{ $closing_stock }}</td>
+
+									</tr>
+									@php $i++; 
+									$closing_stock=$transfer_qty=$damaged_qty=$sold_qty=$opening_stock=$opening_transfer_qty=$opening_damage_qty=$opening_sales_qty=$opening_product_qty=0;
+									@endphp
+
+									@endforeach
+
+								</tbody>	
+								@endif
+							</table>
+						</div>
+				</div>
+			</div>
+		</div>
+
+		</div>
+
+	</div>
+</div>
+<input type="hidden" id="link" value="{{URL::to('/') }}/admin/stockReport">
+@endsection
+
+@section('jquery')
+
+<script type="text/javascript">
+$('.chosen-select').chosen();
+
+
+$("#fdate").datepicker({format:'dd-mm-yyyy',autoclose: true});
+
+$("#tdate").datepicker({format:'dd-mm-yyyy',autoclose: true});
+
+$('#table').DataTable({ "search": true, "paginate":false });
+
+
+	$('#printDiv').html('');
+
+	var link=$('#link').val();
+
+	$('#form').attr('action',link);
+
+function print_stock_report(){
+
+	$('#printDiv').html('<input name="_method" value="PUT" type="hidden">');
+
+	var link=$('#link').val();
+
+	$('#form').attr('action',link+'/print').attr('target', '_blank').submit();
+
+	$('#form').attr('action',link).attr('target', '');
+	
+	$('#printDiv').html('');
+
+}
+</script>
+@endsection

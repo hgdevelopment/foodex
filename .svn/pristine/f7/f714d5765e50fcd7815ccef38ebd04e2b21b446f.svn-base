@@ -1,0 +1,10 @@
+@extends('admin.user.index')
+@section('employee_name',$edituser->employee_name)
+@section('employee_code',$edituser->username)
+@section('employee_password',$edituser->password)
+@section('employee_branch',$edituser->branch)
+@section('employee_type',$edituser->userType)
+@section('edit_id',$edituser->id)
+@section('edit')
+{{ method_field('PUT') }}
+@endsection

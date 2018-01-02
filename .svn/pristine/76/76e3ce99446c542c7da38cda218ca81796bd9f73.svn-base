@@ -1,0 +1,113 @@
+<?php
+
+namespace App\Http\Controllers\admin;
+
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use App\Branch;
+use Auth;
+use Session;
+class BranchController extends Controller
+{
+    /**
+     * Display a listing of the resource.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function index()
+    {
+        $branches = Branch::all();
+        return view('admin.branch.index', compact('branches'));
+    }
+
+    /**
+     * Show the form for creating a new resource.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function create()
+    {
+        //
+
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function store(Request $request)
+    {
+        // 
+        $Branch = new Branch();
+        $Branch->branch_name = $request->branch_name;
+        $request->validate([
+            'branch_name' => 'required|unique:branches|max:200',
+        ]);
+        $Branch->save();
+        Session::flash('message', 'Branch Added Successfully!'); 
+        return redirect('/admin/addBranch');
+    }
+
+    /**
+     * Display the specified resource.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function show($id)
+    {
+        //
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function edit($id)
+    {
+        //
+        $BranchMaster= Branch::all();
+        $editBranch = Branch::find($id);
+        return view('admin.branch.editBranch',compact('BranchMaster','editBranch'));
+    }
+
+    /**
+     * Update the specified resource in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function update(Request $request, $id)
+    {
+        //
+        $Branch = Branch::find($id);
+        $Branch->branch_name = $request->branch_name;
+        $Branch->save();
+        Session::flash('message', 'Branch Updated Successfully!'); 
+        return redirect('/admin/addBranch');
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function destroy($id)
+    {
+        $Branch = Branch::find($id);
+        $products = \DB::table('products')->where('added_branch','=',$id)->count();
+        if($products==0){
+        $Branch->delete();
+        Session::flash('message', 'Branch Deleted Succesfully'); 
+        }else{
+        Session::flash('message', 'Sorry,this branch is already in use');
+        }
+        return redirect('/admin/addBranch');
+    }
+}

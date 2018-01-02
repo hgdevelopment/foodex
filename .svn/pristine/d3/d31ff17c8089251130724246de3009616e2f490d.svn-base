@@ -1,0 +1,202 @@
+@extends('admin.layout.puredrops')
+@section('sidebar')
+	@include('admin.partial.header')
+	@include('admin.partial.aside')
+@endsection
+
+
+@section('body')
+<link href="{{ URL::asset('assets/plugins/bootstrap-material-datetimepicker/css/bootstrap-material-datetimepicker.css')}}" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.4/css/select2.min.css" rel="stylesheet" />
+<style>
+	.select2-selection{
+	padding: .5rem .75rem;
+    font-size: 1rem;
+    line-height: 1.25;
+    min-height: 38px;
+	}
+	.select2-container--default .select2-selection--single .select2-selection__arrow {
+   
+    top: 6px;
+    right: 4px;
+}
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    color: #444;
+    line-height: 22px;
+}
+.bigdrop{
+    /* max-width: 200px !important;*/
+}
+td ul.dropdown-menu{
+    padding:6px;
+}
+td ul.dropdown-menu li a{
+    display: block;
+    width:100%;
+}
+</style>
+<div class="container-fluid">
+	<div class="row page-titles">
+		<div class="col-md-5 col-8 align-self-center">
+			<h2 class="text-themecolor m-b-0 m-t-0">Stock Request</h2>
+		</div>
+	</div>
+	<form method="post" action="#" id="purchase_order_form"> 
+		<div class="container-fluid">
+			<div class="row">
+				<div class="col-md-12">
+                        <div class="card">
+                            
+                            <!-- Nav tabs -->
+                            <ul class="nav nav-tabs customtab" role="tablist">
+                                <li class="nav-item"> <a class="nav-link active" data-toggle="tab" href="#home2" role="tab" aria-expanded="true"><span class="hidden-sm-up"><i class="ti-home"></i></span> <span class="hidden-xs-down">Stock Requests (Send)</span></a> </li>
+                                <li class="nav-item"> <a class="nav-link" data-toggle="tab" href="#profile2" role="tab" aria-expanded="false"><span class="hidden-sm-up"><i class="ti-user"></i></span> <span class="hidden-xs-down">Stock Requests (Inbox)</span></a> </li>
+                                
+                            </ul>
+                            <!-- Tab panes -->
+                            <div class="tab-content">
+                                <div class="tab-pane active" id="home2" role="tabpanel" aria-expanded="true">
+                                    <div class="p-20">
+                                        <table class="table" id="stock_request_send" style="width: 100%">
+                                            <thead>
+                                                <tr>
+                                                    <th>Request ID</th>
+                                                    <th>Branch</th>
+                                                    <th>Requested By</th>
+                                                    <th>Status</th>
+                                                    <th>Action</th>
+                                                </tr>
+                                            </thead>
+                                        </table>
+                                        <br/>
+                                    </div>
+                                </div>
+                                <div class="tab-pane p-20" id="profile2" role="tabpanel" aria-expanded="false">
+                                    <table class="table" id="stock_request_recieve" style="width: 100%">
+                                            <thead>
+                                                <tr>
+                                                    <th>Request ID</th>
+                                                    <th>Branch</th>
+                                                    <th>Requested By</th>
+                                                    <th>Status</th>
+                                                    <th>Action</th>
+                                                </tr>
+                                            </thead>
+                                        </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+			</div>
+			
+		</div>
+	</form>
+</div>
+@endsection
+@section('jquery')
+<script type="text/javascript" src="//cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+<script type="text/javascript" src="//cdn.jsdelivr.net/bootstrap.daterangepicker/2/daterangepicker.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.4/js/select2.full.min.js"></script>
+<script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+<script src="{{ URL::asset('assets/plugins/bootstrap-material-datetimepicker/js/bootstrap-material-datetimepicker.js') }}"></script>
+<script src="{{ URL::asset('assets/plugins/bootstrap-datepicker/bootstrap-datepicker.min.js') }}"></script>
+<script src="{{ URL::asset('js/wizard/jquery.bootstrap.wizard.min.js') }}"></script>
+<script src="{{ URL::asset('js/wizard/form_wizard.js') }}"></script>
+<script src="{{ URL::asset('js/purchase/purchase_order.js')}}"></script>
+<script>
+	$(function(){
+       	$('#stock_request_send').DataTable({
+                // dom: 'Bfrtip',
+                dom: 'Bfrtip',
+                processing: true,
+                serverSide: true,
+                ajax: {
+                    url: '{{URL::to('/') }}/admin/stock/datatable/request',
+                    data: function (d) {
+                        d.name = '';
+                        // d.code = $('input[name=code]').val();
+                        // d.usertype = $('select[name=usertype]').val();
+                        // d.status = $('select[name=status]').val();
+                    }
+                },
+                columns: [
+                    // {data: 'rownum', name: 'rownum'},
+                    {data: 'transfer_code', name: 'transfer_code'},
+                    {data: 'branch_name', name: 'branch_name'},
+                    {data: 'employee_name', name: 'employee_name'},
+                    {data: 'status', name: 'status',
+                   render:function (data, type, full, meta) {
+                                var class_var='label-warning';
+
+                                if(data=='pending'){
+                                    class_var='label-warning';
+                                }else if(data=='confirm'){
+                                     class_var='label-success';
+                                }else if(data=='cancel'){
+                                     class_var='label-danger';
+                                }
+                                else if(data=='stock'){
+                                     class_var='label-primary';
+                                }
+                                return '<label class="label '+class_var+'">'+data+'</label>';
+                    }},
+                    { data: 'action', name: 'action' }
+                ],
+                buttons: [
+                    'copy', 'csv', 'excel', 'pdf', 'print'
+                ]
+       });
+
+        $('#stock_request_recieve').DataTable({
+                // dom: 'Bfrtip',
+                dom: 'Bfrtip',
+                processing: true,
+                serverSide: true,
+                ajax: {
+                    url: '{{URL::to('/') }}/admin/stock/datatable/recieve',
+                    data: function (d) {
+                        d.name = '';
+                        // d.code = $('input[name=code]').val();
+                        // d.usertype = $('select[name=usertype]').val();
+                        // d.status = $('select[name=status]').val();
+                    }
+                },
+                columns: [
+                    // {data: 'rownum', name: 'rownum'},
+                    {data: 'transfer_code', name: 'transfer_code'},
+                    {data: 'branch_name', name: 'branch_name'},
+                    {data: 'employee_name', name: 'employee_name'},
+                    {data: 'status', name: 'status',
+                    render:function (data, type, full, meta) {
+                                var class_var='label-warning';
+                                if(data=='pending'){
+                                    class_var='label-warning';
+                                }else if(data=='confirm'){
+                                     class_var='label-success';
+                                }else if(data=='cancel'){
+                                     class_var='label-danger';
+                                }
+                                else if(data=='stock'){
+                                     class_var='label-primary';
+                                }
+                                return '<label class="label '+class_var+'">'+data+'</label>';
+                    }},
+                    { data: 'action', name: 'action' }
+                ],
+                buttons: [
+                    'copy', 'csv', 'excel', 'pdf', 'print'
+                ]
+       });
+
+        $('body').on('click','.view-request-recieve',function(e){
+          e.preventDefault();
+          window.location.href='{{URL::to('/')}}/admin/stock/request/view/'+$(this).attr('data-id');
+        });
+        $('body').on('click','.view-request-send',function(e){
+          e.preventDefault();
+          window.location.href='{{URL::to('/')}}/admin/stock/request/view/'+$(this).attr('data-id');
+        });
+	});
+</script>
+
+@endsection

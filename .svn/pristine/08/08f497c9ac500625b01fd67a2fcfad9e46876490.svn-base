@@ -1,0 +1,163 @@
+<html>
+	<head>
+		<link href="https://fonts.googleapis.com/css?family=Oswald" rel="stylesheet">
+		<link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+	</head>
+	<style type="text/css">
+		.invoice-title h2, .invoice-title h3,  .invoice-title h4 {
+			display: inline-block;
+		}
+		.table > tbody > tr > .no-line {
+			border-top: none;
+		}
+		.table > thead > tr > .no-line {
+			border-bottom: none;
+		}
+		.table > tbody > tr > .thick-line {
+			border-top: 2px solid;
+		}
+		.thick-line {
+			border-top: 1px solid;
+		}
+	</style>
+	<body style="max-width: 500px; font-family: 'Oswald', serif;   font-size: 20px;">
+		<div class="container" style="max-width: 500px; font-size: 20px;">
+			<div class="row">
+				<div class="col-md-12">
+					<img src="http://heeramart.co/foodex_hyderabad/logonew.png" style="width:500px;"><br>
+					<div class="row">
+						<br>
+						<div class="col-xs-12" style="text-align: center;">
+							<address>
+								GST No:{{ $address->gst_no }}<br>
+								{!!str_replace("\n", '<br />', $address->address)!!}{{ $address->pin_number  }}<br>
+
+								Phone :{{ $address->phone_number }}
+							</address>
+						</div>
+					</div>
+					<div class="row">
+						<div class="invoice-title" style="text-align: center; margin-top:-35px">
+							<h2><u>Sales Invoice</u></h2>
+						</div>
+					</div>
+					<div class="row">
+						<div class="invoice-title" style="text-align: right; margin-right:15px;">
+							<address>
+								Bill # : HF{{ $view_order->bill_number }}</h4><br>
+								Date : {{ $view_order->created_at->format('d-m-Y   H:i:s ') }}<br>
+								Salesman: {{ $sales_person->username }}<br>
+								ME Code: {{ $view_order->me_code}}<br>
+							</address>
+						</div>
+					</div>
+
+					<div class="row">
+						<div class="col-xs-6">
+							<address>
+								<u>Billed To:</u><br>
+								{{ $view_order->customer_name }}<br>
+								{!!str_replace("\n", '<br />', $view_order->customer_address)!!}<br>
+								{{ $view_order->customer_phone }}
+							</address>
+						</div>
+						<div class="col-xs-6 text-right">
+							<address>
+								<u>Shipped To:</u><br>
+								{!!str_replace("\n", '<br />', $view_order->shipping_address)!!}
+							</address>
+						</div>
+						<div class="col-xs-12 text-right">
+							<address>
+								Customer GST # : {{ $view_order->customer_gst }}
+							</address>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div class="row">
+				<table class="table" style="max-width: 500px;font-size: 16px; ">
+					<thead>
+						<tr>
+							<td style="width:60%"><strong>Item</strong></td>
+							<td class="text-right" style="width:10%"><strong>Price</strong></td>
+							<td class="text-right" style="width:10%"><strong>Quantity</strong></td>
+							<td class="text-right" style="width:10%"><strong>Disc%</strong></td>
+							<td class="text-right" style="width:10%"><strong>Total</strong></td>
+						</tr>
+					</thead>
+					<tbody>
+						@php
+							$p = 0;
+							$q=0;
+							$discount = 0;
+						@endphp
+						@foreach($product_payment_details as $details)
+							<tr>
+								<td style="width:60%">{{ $details->name}}</td>
+								<td class="text-right" style="width:10%">{{ $details->billing_price }}</td>
+								<td class="text-right" style="width:10%">{{ $details->product_qty }}</td>
+								<td class="text-right" style="width:10%">{{ $details->discount }} 
+									@php $discount += ($details->billing_price * ($details->discount/100)) * $details->product_qty; @endphp
+								</td>
+								<td class="text-right" style="width:10%">{{ $details->mrp }}</td>
+								<td class="thick-line"></td>
+								@php
+								$q+=$details->product_qty;
+								$p++;
+								@endphp
+							</tr>
+						@endforeach
+
+					</tbody>
+				</table>
+			</div>
+			<div class="row">
+				<div class="col-xs-12 text-right">
+					<address>
+						Total Products : {{ $p }} Products / {{ $q }} Items<br>
+						CGST Amount: ₹ {{ $total_gst/2 }}<br>
+						SGST Amount: ₹ {{ $total_gst/2 }}<br>
+						Saved Amount : ₹ {{ $discount }}<br>
+						Payment Mode : {{ucwords($details->payment_mode) }}@if($details->status=='partial')({{ ucwords($details->status) }}) @endif<br>
+						@if($details->payment_mode=='cash' || $details->payment_mode=='card' || $details->payment_mode=='cheque' )
+							Amount Paid : ₹ {{ $details->paid_amount }}<br>
+							Balance Amount : ₹ {{ $details->balance }}<br>
+						@endif
+						@if($details->payment_mode=='online')
+							Account No : {{ $details->account_number }}<br>
+							Transaction no :{{ $details->transaction_number }}
+						@endif
+						@if($details->payment_mode=='cheque')
+							Cheque No : {{ $details->cheque_number }}
+						@endif
+						@if($details->payment_mode=='both')
+							By Cash :{{ $details->paid_amount }}<br>
+							By Card :{{ $details->card_amount }}
+						@endif
+					</address>
+				</div>
+			</div>
+			<div class="row" style="margin-top:-20px">
+				<div class="thick-line"></div>
+				<div class="invoice-title" style="text-align: center; margin-top:-20px">
+					<h1>₹ <strong>{{ $total_amount }}</strong></h1>
+				</div>
+			</div>
+			<div class="row" >
+				<div class="thick-line"></div>
+				<div class="invoice-title" style="text-align: center">
+					Thank you for shopping visit again.<br>
+				</div>
+				<div class="thick-line"></div>
+			</div>
+			<div class="row" >
+				<div class="thick-line"></div>
+				<div class="invoice-title" style="text-align: left;">
+					Customer Copy...
+				</div>
+			</div>
+		</div>
+	</body>
+</html>
